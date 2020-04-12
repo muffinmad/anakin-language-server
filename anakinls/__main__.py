@@ -4,6 +4,7 @@ import logging
 from .server import server
 
 logging.basicConfig(level=logging.INFO)
+logging.getLogger('pygls.protocol').setLevel(logging.WARN)
 
 
 def main():
