@@ -9,7 +9,8 @@ from jedi.api.classes import Definition
 from pygls.features import (COMPLETION, TEXT_DOCUMENT_DID_CHANGE,
                             TEXT_DOCUMENT_DID_CLOSE, TEXT_DOCUMENT_DID_OPEN,
                             INITIALIZE, HOVER, SIGNATURE_HELP, DEFINITION,
-                            REFERENCES)
+                            REFERENCES, WORKSPACE_DID_CHANGE_CONFIGURATION,
+                            TEXT_DOCUMENT_WILL_SAVE, TEXT_DOCUMENT_DID_SAVE)
 from pygls import types
 from pygls.server import LanguageServer
 from pygls.uris import from_fs_path
@@ -202,3 +203,18 @@ def references(ls, params: types.ReferenceParams) -> List[types.Location]:
     script = get_script(ls, params.textDocument.uri)
     refs = script.get_references(params.position.line + 1, params.position.character)
     return _get_locations(refs)
+
+
+@server.feature(WORKSPACE_DID_CHANGE_CONFIGURATION)
+def did_change_configuration(ls, settings):
+    pass
+
+
+@server.feature(TEXT_DOCUMENT_WILL_SAVE)
+def will_save(ls, params: types.WillSaveTextDocumentParams):
+    pass
+
+
+@server.feature(TEXT_DOCUMENT_DID_SAVE)
+def did_save(ls, params: types.DidSaveTextDocumentParams):
+    pass
