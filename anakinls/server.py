@@ -1,14 +1,16 @@
 import logging
 
 from inspect import Parameter
+from typing import Union, List
 
 from jedi import Script, create_environment, get_default_environment, settings
 
 from pygls.features import (COMPLETION, TEXT_DOCUMENT_DID_CHANGE,
                             TEXT_DOCUMENT_DID_CLOSE, TEXT_DOCUMENT_DID_OPEN,
-                            INITIALIZE, HOVER, SIGNATURE_HELP)
-from pygls.server import LanguageServer
+                            INITIALIZE, HOVER, SIGNATURE_HELP, DEFINITION)
 from pygls import types
+from pygls.server import LanguageServer
+from pygls.uris import from_fs_path
 
 
 _COMPLETION_TYPES = {
@@ -171,3 +173,19 @@ def signature_help(ls, params: types.TextDocumentPositionParams) -> types.Signat
         i += 1
     if result:
         return types.SignatureHelp([result[idx]], 0, param_idx)
+
+
+@server.feature(DEFINITION)
+def definition(ls, params: types.TextDocumentPositionParams) -> List[types.Location]:
+    script = get_script(ls, params.textDocument.uri)
+    defs = script.goto(params.position.line + 1, params.position.character)
+    return [
+        types.Location(
+            from_fs_path(d.module_path),
+            types.Range(
+                types.Position(d.line - 1, d.column),
+                types.Position(d.line - 1, d.column + len(d.name))
+            )
+        )
+        for d in defs if d.module_path
+    ]
