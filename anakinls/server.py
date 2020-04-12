@@ -6,7 +6,7 @@ from jedi import Script, create_environment, get_default_environment, settings
 
 from pygls.features import (COMPLETION, TEXT_DOCUMENT_DID_CHANGE,
                             TEXT_DOCUMENT_DID_CLOSE, TEXT_DOCUMENT_DID_OPEN,
-                            INITIALIZE, HOVER)
+                            INITIALIZE, HOVER, SIGNATURE_HELP)
 from pygls.server import LanguageServer
 from pygls import types
 
@@ -146,3 +146,30 @@ def hover(ls, params: types.TextDocumentPositionParams) -> types.Hover:
             result = infer[0].docstring()
         if result:
             return types.Hover(types.MarkupContent(types.MarkupKind.PlainText, result))
+
+
+@server.feature(SIGNATURE_HELP)
+def signature_help(ls, params: types.TextDocumentPositionParams) -> types.SignatureHelp:
+    script = get_script(ls, params.textDocument.uri)
+    signatures = script.get_signatures(params.position.line + 1, params.position.character)
+
+    result = []
+    idx = -1
+    param_idx = -1
+    i = 0
+    for signature in signatures:
+        if signature.index is None:
+            continue
+        result.append(types.SignatureInformation(
+            signature.to_string(),
+            parameters=[
+                types.ParameterInformation(param.name)
+                for param in signature.params
+            ]
+        ))
+        if signature.index > param_idx:
+            param_idx = signature.index
+            idx = i
+        i += 1
+    if result:
+        return types.SignatureHelp([result[idx]], 0, param_idx)
