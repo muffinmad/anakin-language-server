@@ -60,20 +60,4 @@ foo'''
     assert h is not None
     assert isinstance(h.contents, types.MarkupContent)
     assert h.contents.kind == types.MarkupKind.PlainText
-    assert h.contents.value == 'docstring\n\nSignatures:\nfoo(a, *, b, c=None)'
-
-
-def test_hover_no_docstring():
-    uri = 'file://test_hover_no_docstring.py'
-    content = '''
-def foo(a, *, b, c=None):
-    pass
-
-foo'''
-    doc = Document(uri, content)
-    server.workspace.get_document = Mock(return_value=doc)
-    h = hover(server, types.TextDocumentPositionParams(doc, types.Position(4, 0)))
-    assert h is not None
-    assert isinstance(h.contents, types.MarkupContent)
-    assert h.contents.kind == types.MarkupKind.PlainText
-    assert h.contents.value == 'foo(a, *, b, c=None)'
+    assert h.contents.value == 'foo(a, *, b, c=None)\n\ndocstring'
