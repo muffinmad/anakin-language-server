@@ -1,13 +1,15 @@
 import logging
 
 from inspect import Parameter
-from typing import Union, List
+from typing import List
 
 from jedi import Script, create_environment, get_default_environment, settings
+from jedi.api.classes import Definition
 
 from pygls.features import (COMPLETION, TEXT_DOCUMENT_DID_CHANGE,
                             TEXT_DOCUMENT_DID_CLOSE, TEXT_DOCUMENT_DID_OPEN,
-                            INITIALIZE, HOVER, SIGNATURE_HELP, DEFINITION)
+                            INITIALIZE, HOVER, SIGNATURE_HELP, DEFINITION,
+                            REFERENCES)
 from pygls import types
 from pygls.server import LanguageServer
 from pygls.uris import from_fs_path
@@ -175,10 +177,7 @@ def signature_help(ls, params: types.TextDocumentPositionParams) -> types.Signat
         return types.SignatureHelp([result[idx]], 0, param_idx)
 
 
-@server.feature(DEFINITION)
-def definition(ls, params: types.TextDocumentPositionParams) -> List[types.Location]:
-    script = get_script(ls, params.textDocument.uri)
-    defs = script.goto(params.position.line + 1, params.position.character)
+def _get_locations(defs: List[Definition]) -> List[types.Location]:
     return [
         types.Location(
             from_fs_path(d.module_path),
@@ -189,3 +188,17 @@ def definition(ls, params: types.TextDocumentPositionParams) -> List[types.Locat
         )
         for d in defs if d.module_path
     ]
+
+
+@server.feature(DEFINITION)
+def definition(ls, params: types.TextDocumentPositionParams) -> List[types.Location]:
+    script = get_script(ls, params.textDocument.uri)
+    defs = script.goto(params.position.line + 1, params.position.character)
+    return _get_locations(defs)
+
+
+@server.feature(REFERENCES)
+def references(ls, params: types.ReferenceParams) -> List[types.Location]:
+    script = get_script(ls, params.textDocument.uri)
+    refs = script.get_references(params.position.line + 1, params.position.character)
+    return _get_locations(refs)
