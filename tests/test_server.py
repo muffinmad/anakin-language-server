@@ -60,7 +60,7 @@ foo'''
     assert h is not None
     assert isinstance(h.contents, types.MarkupContent)
     assert h.contents.kind == types.MarkupKind.PlainText
-    assert h.contents.value == 'docstring'
+    assert h.contents.value == 'docstring\n\nSignatures:\nfoo(a, *, b, c=None)'
 
 
 def test_hover_no_docstring():
