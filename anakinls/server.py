@@ -141,9 +141,14 @@ def hover(ls, params: types.TextDocumentPositionParams) -> types.Hover:
     script = get_script(ls, params.textDocument.uri)
     infer = script.infer(params.position.line + 1, params.position.character)
     if infer:
-        result = infer[0].docstring(raw=True)
-        if not result:
-            result = infer[0].docstring()
+        infer = infer[0]
+        doc = infer._get_docstring()
+        sig = infer._get_docstring_signature()
+        if doc and sig:
+            result = f'{doc}\n\nSignatures:\n{sig}'
+        else:
+            result = f'{doc}{sig}'
+
         if result:
             return types.Hover(types.MarkupContent(types.MarkupKind.PlainText, result))
 
