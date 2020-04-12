@@ -15,7 +15,7 @@ setup(
     long_description_content_type='text/markdown',
     url='https://github.com/muffinmad/anakin-language-server',
     packages=['anakinls'],
-    python_requires='>=3.5',
+    python_requires='>=3.6',
     install_requires=[
         'jedi==0.16.0',
         'pygls==0.8.1'
