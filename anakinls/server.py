@@ -8,26 +8,18 @@ from pygls.features import (COMPLETION, TEXT_DOCUMENT_DID_CHANGE,
                             TEXT_DOCUMENT_DID_CLOSE, TEXT_DOCUMENT_DID_OPEN,
                             INITIALIZE, HOVER)
 from pygls.server import LanguageServer
-from pygls.types import (CompletionItem, CompletionList, CompletionParams,
-                         CompletionItemKind,
-                         ConfigurationItem, ConfigurationParams, Diagnostic,
-                         DidChangeTextDocumentParams, DidCloseTextDocumentParams,
-                         DidOpenTextDocumentParams,
-                         MessageType, Position, Range, Hover, MarkupContent,
-                         MarkupKind,
-                         TextDocumentIdentifier, TextDocumentPositionParams,
-                         InitializeParams)
+from pygls import types
 
 
 _COMPLETION_TYPES = {
-    'module': CompletionItemKind.Module,
-    'class': CompletionItemKind.Class,
-    'instance': CompletionItemKind.Reference,
-    'function': CompletionItemKind.Function,
-    'param': CompletionItemKind.Variable,
-    'path': CompletionItemKind.Text,
-    'keyword': CompletionItemKind.Keyword,
-    'statement': CompletionItemKind.Keyword
+    'module': types.CompletionItemKind.Module,
+    'class': types.CompletionItemKind.Class,
+    'instance': types.CompletionItemKind.Reference,
+    'function': types.CompletionItemKind.Function,
+    'param': types.CompletionItemKind.Variable,
+    'path': types.CompletionItemKind.Text,
+    'keyword': types.CompletionItemKind.Keyword,
+    'statement': types.CompletionItemKind.Keyword
 }
 
 
@@ -41,7 +33,7 @@ class AnakinLanguageServer(LanguageServer):
         settings.case_insensitive_completion = False
 
         @self.feature(INITIALIZE)
-        def initialize(params: InitializeParams):
+        def initialize(params: types.InitializeParams):
             venv = getattr(params.initializationOptions, 'venv', None)
             if venv:
                 self.jediEnvironment = create_environment(venv, False)
@@ -71,12 +63,12 @@ def get_script(ls: AnakinLanguageServer, uri: str, update: bool = False) -> Scri
 
 
 @server.feature(TEXT_DOCUMENT_DID_OPEN)
-async def did_open(ls, params: DidOpenTextDocumentParams):
+async def did_open(ls, params: types.DidOpenTextDocumentParams):
     get_script(ls, params.textDocument.uri)
 
 
 @server.feature(TEXT_DOCUMENT_DID_CLOSE)
-def did_close(ls, params: DidCloseTextDocumentParams):
+def did_close(ls, params: types.DidCloseTextDocumentParams):
     try:
         del scripts[params.textDocument.uri]
     except KeyError:
@@ -84,19 +76,19 @@ def did_close(ls, params: DidCloseTextDocumentParams):
 
 
 @server.feature(TEXT_DOCUMENT_DID_CHANGE)
-def did_change(ls, params: DidChangeTextDocumentParams):
+def did_change(ls, params: types.DidChangeTextDocumentParams):
     get_script(ls, params.textDocument.uri, True)
 
 
-def get_completion_kind(ls: LanguageServer, completion_type: str) -> CompletionItemKind:
+def get_completion_kind(ls: LanguageServer, completion_type: str) -> types.CompletionItemKind:
     if completion_type not in _COMPLETION_TYPES:
         ls.show_message(f'Unknown completion type {completion_type}')
-        return CompletionItemKind.Text
+        return types.CompletionItemKind.Text
     return _COMPLETION_TYPES[completion_type]
 
 
 @server.feature(COMPLETION, trigger_characters=['.'])
-def completions(ls: LanguageServer, params: CompletionParams = None):
+def completions(ls: LanguageServer, params: types.CompletionParams = None):
     script = get_script(ls, params.textDocument.uri)
     completions = script.complete(
         params.position.line + 1,
@@ -117,7 +109,7 @@ def completions(ls: LanguageServer, params: CompletionParams = None):
                 kind=get_completion_kind(ls, completion.type),
                 documentation=completion.docstring(raw=True)
             )
-            yield CompletionItem(**item)
+            yield types.CompletionItem(**item)
             for signature in completion.get_signatures():
                 names = []
                 snippets = []
@@ -134,18 +126,18 @@ def completions(ls: LanguageServer, params: CompletionParams = None):
                     snippets.append(f'{snippet_prefix}${{{i + 1}:{param.name}}}')
                 names_str = ', '.join(names)
                 snippets_str = ', '.join(snippets)
-                yield CompletionItem(**dict(
+                yield types.CompletionItem(**dict(
                     item,
                     label=f'{completion.name}({names_str})',
                     insert_text=f'{completion.name}({snippets_str})$0',
                     insert_text_format=2
                 ))
 
-    return CompletionList(False, list(_completions()))
+    return types.CompletionList(False, list(_completions()))
 
 
 @server.feature(HOVER)
-def hover(ls, params: TextDocumentPositionParams) -> Hover:
+def hover(ls, params: types.TextDocumentPositionParams) -> types.Hover:
     script = get_script(ls, params.textDocument.uri)
     infer = script.infer(params.position.line + 1, params.position.character)
     if infer:
@@ -153,4 +145,4 @@ def hover(ls, params: TextDocumentPositionParams) -> Hover:
         if not result:
             result = infer[0].docstring()
         if result:
-            return Hover(MarkupContent(MarkupKind.PlainText, result))
+            return types.Hover(types.MarkupContent(types.MarkupKind.PlainText, result))

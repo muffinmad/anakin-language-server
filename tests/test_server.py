@@ -4,10 +4,7 @@ from unittest.mock import Mock
 
 from anakinls.server import completions, hover
 
-from pygls.types import (CompletionParams, TextDocumentIdentifier,
-                         Position, CompletionContext, CompletionTriggerKind,
-                         InsertTextFormat, TextDocumentPositionParams, MarkupContent,
-                         MarkupKind)
+from pygls import types
 from pygls.workspace import Document, Workspace
 
 
@@ -33,10 +30,10 @@ foo'''
     server.workspace.get_document = Mock(return_value=doc)
     completion = completions(
         server,
-        CompletionParams(
-            TextDocumentIdentifier(uri),
-            Position(4, 3),
-            CompletionContext(CompletionTriggerKind.Invoked)
+        types.CompletionParams(
+            types.TextDocumentIdentifier(uri),
+            types.Position(4, 3),
+            types.CompletionContext(types.CompletionTriggerKind.Invoked)
         ))
     assert len(completion.items) == 2
     item = completion.items[0]
@@ -45,7 +42,7 @@ foo'''
     assert item.insertTextFormat is None
     item = completion.items[1]
     assert item.label == 'foo(a, b)'
-    assert item.insertTextFormat == InsertTextFormat.Snippet
+    assert item.insertTextFormat == types.InsertTextFormat.Snippet
     assert item.insertText == 'foo(${1:a}, b=${2:b})$0'
 
 
@@ -59,10 +56,10 @@ def foo(a, *, b, c=None):
 foo'''
     doc = Document(uri, content)
     server.workspace.get_document = Mock(return_value=doc)
-    h = hover(server, TextDocumentPositionParams(doc, Position(5, 0)))
+    h = hover(server, types.TextDocumentPositionParams(doc, types.Position(5, 0)))
     assert h is not None
-    assert isinstance(h.contents, MarkupContent)
-    assert h.contents.kind == MarkupKind.PlainText
+    assert isinstance(h.contents, types.MarkupContent)
+    assert h.contents.kind == types.MarkupKind.PlainText
     assert h.contents.value == 'docstring'
 
 
@@ -75,8 +72,8 @@ def foo(a, *, b, c=None):
 foo'''
     doc = Document(uri, content)
     server.workspace.get_document = Mock(return_value=doc)
-    h = hover(server, TextDocumentPositionParams(doc, Position(4, 0)))
+    h = hover(server, types.TextDocumentPositionParams(doc, types.Position(4, 0)))
     assert h is not None
-    assert isinstance(h.contents, MarkupContent)
-    assert h.contents.kind == MarkupKind.PlainText
+    assert isinstance(h.contents, types.MarkupContent)
+    assert h.contents.kind == types.MarkupKind.PlainText
     assert h.contents.value == 'foo(a, *, b, c=None)'
