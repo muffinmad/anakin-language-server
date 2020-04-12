@@ -52,15 +52,38 @@ class AnakinLanguageServer(LanguageServer):
 
 
 server = AnakinLanguageServer()
+scripts = {}
 
 
-def get_script(ls: AnakinLanguageServer, uri: str) -> Script:
-    document = ls.workspace.get_document(uri)
-    return Script(
-        source=document.source,
-        path=document.path,
-        environment=ls.jediEnvironment
-    )
+def get_script(ls: AnakinLanguageServer, uri: str, update: bool = False) -> Script:
+    result = None if update else scripts.get(uri)
+    if not result:
+        document = ls.workspace.get_document(uri)
+        result = Script(
+            source=document.source,
+            path=document.path,
+            environment=ls.jediEnvironment
+        )
+        scripts[uri] = result
+    return result
+
+
+@server.feature(TEXT_DOCUMENT_DID_OPEN)
+async def did_open(ls, params: DidOpenTextDocumentParams):
+    get_script(ls, params.textDocument.uri)
+
+
+@server.feature(TEXT_DOCUMENT_DID_CLOSE)
+def did_close(ls, params: DidCloseTextDocumentParams):
+    try:
+        del scripts[params.textDocument.uri]
+    except KeyError:
+        pass
+
+
+@server.feature(TEXT_DOCUMENT_DID_CHANGE)
+def did_change(ls, params: DidChangeTextDocumentParams):
+    get_script(ls, params.textDocument.uri, True)
 
 
 def get_completion_kind(ls: LanguageServer, completion_type: str) -> CompletionItemKind:
