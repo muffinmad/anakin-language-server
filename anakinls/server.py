@@ -6,16 +6,18 @@ from jedi import Script, create_environment, get_default_environment, settings
 
 from pygls.features import (COMPLETION, TEXT_DOCUMENT_DID_CHANGE,
                             TEXT_DOCUMENT_DID_CLOSE, TEXT_DOCUMENT_DID_OPEN,
-                            INITIALIZE)
+                            INITIALIZE, HOVER)
 from pygls.server import LanguageServer
 from pygls.types import (CompletionItem, CompletionList, CompletionParams,
                          CompletionItemKind,
                          ConfigurationItem, ConfigurationParams, Diagnostic,
                          DidChangeTextDocumentParams, DidCloseTextDocumentParams,
                          DidOpenTextDocumentParams,
-                         MessageType, Position, Range,
-                         TextDocumentIdentifier,
+                         MessageType, Position, Range, Hover, MarkupContent,
+                         MarkupKind,
+                         TextDocumentIdentifier, TextDocumentPositionParams,
                          InitializeParams)
+
 
 _COMPLETION_TYPES = {
     'module': CompletionItemKind.Module,
@@ -140,3 +142,15 @@ def completions(ls: LanguageServer, params: CompletionParams = None):
                 ))
 
     return CompletionList(False, list(_completions()))
+
+
+@server.feature(HOVER)
+def hover(ls, params: TextDocumentPositionParams) -> Hover:
+    script = get_script(ls, params.textDocument.uri)
+    infer = script.infer(params.position.line + 1, params.position.character)
+    if infer:
+        result = infer[0].docstring(raw=True)
+        if not result:
+            result = infer[0].docstring()
+        if result:
+            return Hover(MarkupContent(MarkupKind.PlainText, result))
