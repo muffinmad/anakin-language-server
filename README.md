@@ -5,7 +5,7 @@ Yet another Jedi Python language server
 
 - Python >= 3.6
 - pygls == 0.8.1
-- Jedi == 0.16.0
+- Jedi == 0.17.0
 
 ## Implemented features
 
