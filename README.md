@@ -14,12 +14,23 @@ Yet another Jedi Python language server
 - `textDocument/signatureHelp`
 - `textDocument/definition`
 - `textDocument/references`
+- `textDocument/publishDiagnostics`
 
 ## Initialization option
 
 - `venv` - path to virtualenv
 
 Also one can set `VIRTUAL_ENV` or `CONDA_PREFIX` before running `anakinls` so Jedi will find proper environment. See [get\_default\_environment](https://jedi.readthedocs.io/en/latest/docs/api.html#jedi.get_default_environment).
+
+
+## Diagnostics
+
+Diagnostics are published on document open and save.
+
+Diagnostics provides:
+
+- Jedi. See [get\_syntax\_errors](https://jedi.readthedocs.io/en/latest/docs/api.html#jedi.Script.get_syntax_errors).
+
 
 ## Example
 

@@ -72,9 +72,27 @@ def get_script(ls: AnakinLanguageServer, uri: str, update: bool = False) -> Scri
     return result
 
 
+def _validate(ls: AnakinLanguageServer, uri: str):
+    script = get_script(ls, uri)
+    result = [
+        types.Diagnostic(
+            range=types.Range(
+                types.Position(x.line - 1, x.column),
+                types.Position(x.until_line - 1, x.until_column)
+            ),
+            message='Invalid syntax',
+            severity=types.DiagnosticSeverity.Error,
+            source='jedi'
+        )
+        for x in script.get_syntax_errors()
+    ]
+
+    ls.publish_diagnostics(uri, result)
+
+
 @server.feature(TEXT_DOCUMENT_DID_OPEN)
 async def did_open(ls, params: types.DidOpenTextDocumentParams):
-    get_script(ls, params.textDocument.uri)
+    _validate(ls, params.textDocument.uri)
 
 
 @server.feature(TEXT_DOCUMENT_DID_CLOSE)
@@ -222,4 +240,4 @@ def will_save(ls, params: types.WillSaveTextDocumentParams):
 
 @server.feature(TEXT_DOCUMENT_DID_SAVE)
 def did_save(ls, params: types.DidSaveTextDocumentParams):
-    pass
+    _validate(ls, params.textDocument.uri)
