@@ -58,3 +58,9 @@ Set it in project's dir-locals file.")
 (add-to-list 'eglot-server-programs
              '(python-mode my/eglot-anakinls "anakinls"))
 ```
+
+## Installation
+
+```
+pip install anakin-language-server
+```
