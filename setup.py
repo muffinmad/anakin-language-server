@@ -18,7 +18,9 @@ setup(
     python_requires='>=3.6',
     install_requires=[
         'jedi==0.17.0',
-        'pygls==0.8.1'
+        'pygls==0.8.1',
+        'pyflakes==2.2.0',
+        'pycodestyle==2.5.0'
     ],
     entry_points={
         'console_scripts': [

@@ -6,6 +6,8 @@ Yet another Jedi Python language server
 - Python >= 3.6
 - pygls == 0.8.1
 - Jedi == 0.17.0
+- pyflakes == 2.2.0
+- pycodestyle == 2.5.0
 
 ## Implemented features
 
@@ -30,7 +32,8 @@ Diagnostics are published on document open and save.
 Diagnostics provides:
 
 - Jedi. See [get\_syntax\_errors](https://jedi.readthedocs.io/en/latest/docs/api.html#jedi.Script.get_syntax_errors).
-
+- pyflakes
+- pycodestyle
 
 ## Example
 

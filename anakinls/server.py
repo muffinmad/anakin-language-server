@@ -7,6 +7,11 @@ from jedi import (Script, create_environment, get_default_environment, settings,
                   get_default_project)
 from jedi.api.classes import Name
 
+from pycodestyle import (BaseReport as CodestyleBaseReport, Checker as CodestyleChecker,
+                         StyleGuide as CodestyleStyleGuide)
+
+from pyflakes.api import check as pyflakes_check
+
 from pygls.features import (COMPLETION, TEXT_DOCUMENT_DID_CHANGE,
                             TEXT_DOCUMENT_DID_CLOSE, TEXT_DOCUMENT_DID_OPEN,
                             INITIALIZE, HOVER, SIGNATURE_HELP, DEFINITION,
@@ -48,7 +53,7 @@ class AnakinLanguageServer(LanguageServer):
                 self.jediEnvironment = get_default_environment()
             self.jediProject = get_default_project(getattr(params, 'rootPath', None))
             logging.info(f'Jedi environment python: {self.jediEnvironment.executable}')
-            logging.info(f'Jedi environment sys_path:')
+            logging.info('Jedi environment sys_path:')
             for p in self.jediEnvironment.get_sys_path():
                 logging.info(f'  {p}')
             logging.info(f'Jedi project path: {self.jediProject._path}')
@@ -72,20 +77,99 @@ def get_script(ls: AnakinLanguageServer, uri: str, update: bool = False) -> Scri
     return result
 
 
+class PyflakesReporter:
+
+    def __init__(self, result, script):
+        self.result = result
+        self.script = script
+
+    def unexpectedError(self, _filename, msg):
+        self.result.append(types.Diagnostic(
+            types.Range(types.Position(), types.Position()),
+            msg,
+            types.DiagnosticSeverity.Error,
+            source='pyflakes'
+        ))
+
+    def _get_codeline(self, line):
+        return self.script._code_lines[line].rstrip('\n\r')
+
+    def syntaxError(self, _filename, msg, lineno, offset, _text):
+        line = lineno - 1
+        col = offset or 0
+        self.result.append(types.Diagnostic(
+            types.Range(
+                types.Position(line, col),
+                types.Position(line, len(self._get_codeline(line)) - col)
+            ),
+            msg,
+            types.DiagnosticSeverity.Error,
+            source='pyflakes'
+        ))
+
+    def flake(self, message):
+        line = message.lineno - 1
+        self.result.append(types.Diagnostic(
+            types.Range(
+                types.Position(line, message.col),
+                types.Position(line, len(self._get_codeline(line)) - message.col)
+            ),
+            message.message % message.message_args,
+            types.DiagnosticSeverity.Warning,
+            source='pyflakes'
+        ))
+
+
+class CodestyleReport(CodestyleBaseReport):
+
+    def __init__(self, options, result):
+        super().__init__(options)
+        self.result = result
+
+    def error(self, line_number, offset, text, check):
+        code = text[:4]
+        if self._ignore_code(code) or code in self.expected:
+            return
+        line = line_number - 1
+        self.result.append(types.Diagnostic(
+            types.Range(
+                types.Position(line, offset),
+                types.Position(line, len(self.lines[line].rstrip('\n\r')) - offset)
+            ),
+            text,
+            types.DiagnosticSeverity.Warning,
+            code,
+            'pycodestyle'
+        ))
+
+
 def _validate(ls: AnakinLanguageServer, uri: str):
+    # Jedi
     script = get_script(ls, uri)
     result = [
         types.Diagnostic(
-            range=types.Range(
+            types.Range(
                 types.Position(x.line - 1, x.column),
                 types.Position(x.until_line - 1, x.until_column)
             ),
-            message='Invalid syntax',
-            severity=types.DiagnosticSeverity.Error,
+            'Invalid syntax',
+            types.DiagnosticSeverity.Error,
             source='jedi'
         )
         for x in script.get_syntax_errors()
     ]
+    if result:
+        ls.publish_diagnostics(uri, result)
+        return
+
+    # pyflakes
+    pyflakes_check(script._code, script.path, PyflakesReporter(result, script))
+
+    # pycodestyle
+    codestyleopts = CodestyleStyleGuide().options
+    CodestyleChecker(
+        script.path, script._code.splitlines(True), codestyleopts, CodestyleReport(codestyleopts, result)
+    ).check_all()
 
     ls.publish_diagnostics(uri, result)
 
