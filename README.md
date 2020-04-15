@@ -29,7 +29,7 @@ Also one can set `VIRTUAL_ENV` or `CONDA_PREFIX` before running `anakinls` so Je
 
 Diagnostics are published on document open and save.
 
-Diagnostics provides:
+Diagnostics providers:
 
 - Jedi. See [get\_syntax\_errors](https://jedi.readthedocs.io/en/latest/docs/api.html#jedi.Script.get_syntax_errors).
 - pyflakes
