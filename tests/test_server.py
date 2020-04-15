@@ -10,6 +10,7 @@ from pygls.workspace import Document, Workspace
 
 class Server():
     jediEnvironment = None
+    jediProject = None
 
     def __init__(self):
         super().__init__()

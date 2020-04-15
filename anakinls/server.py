@@ -3,8 +3,9 @@ import logging
 from inspect import Parameter
 from typing import List
 
-from jedi import Script, create_environment, get_default_environment, settings
-from jedi.api.classes import Definition
+from jedi import (Script, create_environment, get_default_environment, settings,
+                  get_default_project)
+from jedi.api.classes import Name
 
 from pygls.features import (COMPLETION, TEXT_DOCUMENT_DID_CHANGE,
                             TEXT_DOCUMENT_DID_CLOSE, TEXT_DOCUMENT_DID_OPEN,
@@ -31,6 +32,7 @@ _COMPLETION_TYPES = {
 class AnakinLanguageServer(LanguageServer):
     CONFIGURATION_SECTION = 'anakinls'
     jediEnvironment = None
+    jediProject = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -44,10 +46,12 @@ class AnakinLanguageServer(LanguageServer):
                 self.jediEnvironment = create_environment(venv, False)
             else:
                 self.jediEnvironment = get_default_environment()
+            self.jediProject = get_default_project(getattr(params, 'rootPath', None))
             logging.info(f'Jedi environment python: {self.jediEnvironment.executable}')
             logging.info(f'Jedi environment sys_path:')
             for p in self.jediEnvironment.get_sys_path():
                 logging.info(f'  {p}')
+            logging.info(f'Jedi project path: {self.jediProject._path}')
 
 
 server = AnakinLanguageServer()
@@ -59,9 +63,10 @@ def get_script(ls: AnakinLanguageServer, uri: str, update: bool = False) -> Scri
     if not result:
         document = ls.workspace.get_document(uri)
         result = Script(
-            source=document.source,
+            code=document.source,
             path=document.path,
-            environment=ls.jediEnvironment
+            environment=ls.jediEnvironment,
+            project=ls.jediProject
         )
         scripts[uri] = result
     return result
@@ -178,7 +183,7 @@ def signature_help(ls, params: types.TextDocumentPositionParams) -> types.Signat
         return types.SignatureHelp([result[idx]], 0, param_idx)
 
 
-def _get_locations(defs: List[Definition]) -> List[types.Location]:
+def _get_locations(defs: List[Name]) -> List[types.Location]:
     return [
         types.Location(
             from_fs_path(d.module_path),

@@ -17,7 +17,7 @@ setup(
     packages=['anakinls'],
     python_requires='>=3.6',
     install_requires=[
-        'jedi==0.16.0',
+        'jedi==0.17.0',
         'pygls==0.8.1'
     ],
     entry_points={
