@@ -35,9 +35,13 @@ _COMPLETION_TYPES = {
 
 
 class AnakinLanguageServer(LanguageServer):
-    CONFIGURATION_SECTION = 'anakinls'
     jediEnvironment = None
     jediProject = None
+    config = {
+        'pyflakes_errors': [
+            'UndefinedName'
+        ]
+    }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -79,9 +83,10 @@ def get_script(ls: AnakinLanguageServer, uri: str, update: bool = False) -> Scri
 
 class PyflakesReporter:
 
-    def __init__(self, result, script):
+    def __init__(self, result, script, errors):
         self.result = result
         self.script = script
+        self.errors = errors
 
     def unexpectedError(self, _filename, msg):
         self.result.append(types.Diagnostic(
@@ -109,13 +114,17 @@ class PyflakesReporter:
 
     def flake(self, message):
         line = message.lineno - 1
+        if message.__class__.__name__ in self.errors:
+            severity = types.DiagnosticSeverity.Error
+        else:
+            severity = types.DiagnosticSeverity.Warning
         self.result.append(types.Diagnostic(
             types.Range(
                 types.Position(line, message.col),
                 types.Position(line, len(self._get_codeline(line)) - message.col)
             ),
             message.message % message.message_args,
-            types.DiagnosticSeverity.Warning,
+            severity,
             source='pyflakes'
         ))
 
@@ -163,7 +172,7 @@ def _validate(ls: AnakinLanguageServer, uri: str):
         return
 
     # pyflakes
-    pyflakes_check(script._code, script.path, PyflakesReporter(result, script))
+    pyflakes_check(script._code, script.path, PyflakesReporter(result, script, ls.config['pyflakes_errors']))
 
     # pycodestyle
     codestyleopts = CodestyleStyleGuide().options
@@ -313,8 +322,12 @@ def references(ls, params: types.ReferenceParams) -> List[types.Location]:
 
 
 @server.feature(WORKSPACE_DID_CHANGE_CONFIGURATION)
-def did_change_configuration(ls, settings):
-    pass
+def did_change_configuration(ls, settings: types.DidChangeConfigurationParams):
+    if not settings.settings or not hasattr(settings.settings, 'anakinls'):
+        return
+    settings = settings.settings.anakinls
+    if hasattr(settings, 'pyflakes_errors'):
+        ls.config['pyflakes_errors'] = settings.pyflakes_errors
 
 
 @server.feature(TEXT_DOCUMENT_WILL_SAVE)
