@@ -40,7 +40,7 @@ Diagnostics providers:
 Configuration options must be passed under `anakinls` key in `workspace/didChangeConfiguration` notification.
 
 Available options:
-- `pyflakes_errors` - Diagnostic severity will be set to `Error` if Pyflakes message class name is in this list. See [Pyflakes messages](https://github.com/PyCQA/pyflakes/blob/master/pyflakes/messages.py). Default: `['UndefinedName`]`.
+- `pyflakes_errors` - Diagnostic severity will be set to `Error` if Pyflakes message class name is in this list. See [Pyflakes messages](https://github.com/PyCQA/pyflakes/blob/master/pyflakes/messages.py). Default: `['UndefinedName']`.
 
 ## Example
 
