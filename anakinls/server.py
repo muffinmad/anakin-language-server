@@ -3,8 +3,8 @@ import logging
 from inspect import Parameter
 from typing import List
 
-from jedi import (Script, create_environment, get_default_environment, settings,
-                  get_default_project)
+from jedi import (Script, create_environment, get_default_environment,
+                  settings as jedi_settings, get_default_project)
 from jedi.api.classes import Name
 
 from pycodestyle import (BaseReport as CodestyleBaseReport, Checker as CodestyleChecker,
@@ -34,48 +34,29 @@ _COMPLETION_TYPES = {
 }
 
 
-class AnakinLanguageServer(LanguageServer):
-    jediEnvironment = None
-    jediProject = None
-    config = {
-        'pyflakes_errors': [
-            'UndefinedName'
-        ]
-    }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        settings.case_insensitive_completion = False
-
-        @self.feature(INITIALIZE)
-        def initialize(params: types.InitializeParams):
-            venv = getattr(params.initializationOptions, 'venv', None)
-            if venv:
-                self.jediEnvironment = create_environment(venv, False)
-            else:
-                self.jediEnvironment = get_default_environment()
-            self.jediProject = get_default_project(getattr(params, 'rootPath', None))
-            logging.info(f'Jedi environment python: {self.jediEnvironment.executable}')
-            logging.info('Jedi environment sys_path:')
-            for p in self.jediEnvironment.get_sys_path():
-                logging.info(f'  {p}')
-            logging.info(f'Jedi project path: {self.jediProject._path}')
+jedi_settings.case_insensitive_completion = False
 
 
-server = AnakinLanguageServer()
+server = LanguageServer()
 scripts = {}
+jediEnvironment = None
+jediProject = None
+config = {
+    'pyflakes_errors': [
+        'UndefinedName'
+    ]
+}
 
 
-def get_script(ls: AnakinLanguageServer, uri: str, update: bool = False) -> Script:
+def get_script(ls: LanguageServer, uri: str, update: bool = False) -> Script:
     result = None if update else scripts.get(uri)
     if not result:
         document = ls.workspace.get_document(uri)
         result = Script(
             code=document.source,
             path=document.path,
-            environment=ls.jediEnvironment,
-            project=ls.jediProject
+            environment=jediEnvironment,
+            project=jediProject
         )
         scripts[uri] = result
     return result
@@ -152,7 +133,7 @@ class CodestyleReport(CodestyleBaseReport):
         ))
 
 
-def _validate(ls: AnakinLanguageServer, uri: str):
+def _validate(ls: LanguageServer, uri: str):
     # Jedi
     script = get_script(ls, uri)
     result = [
@@ -172,7 +153,7 @@ def _validate(ls: AnakinLanguageServer, uri: str):
         return
 
     # pyflakes
-    pyflakes_check(script._code, script.path, PyflakesReporter(result, script, ls.config['pyflakes_errors']))
+    pyflakes_check(script._code, script.path, PyflakesReporter(result, script, config['pyflakes_errors']))
 
     # pycodestyle
     codestyleopts = CodestyleStyleGuide().options
@@ -183,13 +164,30 @@ def _validate(ls: AnakinLanguageServer, uri: str):
     ls.publish_diagnostics(uri, result)
 
 
+@server.feature(INITIALIZE)
+def initialize(ls: LanguageServer, params: types.InitializeParams):
+    global jediEnvironment
+    global jediProject
+    venv = getattr(params.initializationOptions, 'venv', None)
+    if venv:
+        jediEnvironment = create_environment(venv, False)
+    else:
+        jediEnvironment = get_default_environment()
+    jediProject = get_default_project(getattr(params, 'rootPath', None))
+    logging.info(f'Jedi environment python: {jediEnvironment.executable}')
+    logging.info('Jedi environment sys_path:')
+    for p in jediEnvironment.get_sys_path():
+        logging.info(f'  {p}')
+    logging.info(f'Jedi project path: {jediProject._path}')
+
+
 @server.feature(TEXT_DOCUMENT_DID_OPEN)
-async def did_open(ls, params: types.DidOpenTextDocumentParams):
+async def did_open(ls: LanguageServer, params: types.DidOpenTextDocumentParams):
     _validate(ls, params.textDocument.uri)
 
 
 @server.feature(TEXT_DOCUMENT_DID_CLOSE)
-def did_close(ls, params: types.DidCloseTextDocumentParams):
+def did_close(ls: LanguageServer, params: types.DidCloseTextDocumentParams):
     try:
         del scripts[params.textDocument.uri]
     except KeyError:
@@ -197,7 +195,7 @@ def did_close(ls, params: types.DidCloseTextDocumentParams):
 
 
 @server.feature(TEXT_DOCUMENT_DID_CHANGE)
-def did_change(ls, params: types.DidChangeTextDocumentParams):
+def did_change(ls: LanguageServer, params: types.DidChangeTextDocumentParams):
     get_script(ls, params.textDocument.uri, True)
 
 
@@ -258,7 +256,7 @@ def completions(ls: LanguageServer, params: types.CompletionParams = None):
 
 
 @server.feature(HOVER)
-def hover(ls, params: types.TextDocumentPositionParams) -> types.Hover:
+def hover(ls: LanguageServer, params: types.TextDocumentPositionParams) -> types.Hover:
     script = get_script(ls, params.textDocument.uri)
     infer = script.infer(params.position.line + 1, params.position.character)
     if infer:
@@ -268,7 +266,7 @@ def hover(ls, params: types.TextDocumentPositionParams) -> types.Hover:
 
 
 @server.feature(SIGNATURE_HELP)
-def signature_help(ls, params: types.TextDocumentPositionParams) -> types.SignatureHelp:
+def signature_help(ls: LanguageServer, params: types.TextDocumentPositionParams) -> types.SignatureHelp:
     script = get_script(ls, params.textDocument.uri)
     signatures = script.get_signatures(params.position.line + 1, params.position.character)
 
@@ -308,21 +306,21 @@ def _get_locations(defs: List[Name]) -> List[types.Location]:
 
 
 @server.feature(DEFINITION)
-def definition(ls, params: types.TextDocumentPositionParams) -> List[types.Location]:
+def definition(ls: LanguageServer, params: types.TextDocumentPositionParams) -> List[types.Location]:
     script = get_script(ls, params.textDocument.uri)
     defs = script.goto(params.position.line + 1, params.position.character)
     return _get_locations(defs)
 
 
 @server.feature(REFERENCES)
-def references(ls, params: types.ReferenceParams) -> List[types.Location]:
+def references(ls: LanguageServer, params: types.ReferenceParams) -> List[types.Location]:
     script = get_script(ls, params.textDocument.uri)
     refs = script.get_references(params.position.line + 1, params.position.character)
     return _get_locations(refs)
 
 
 @server.feature(WORKSPACE_DID_CHANGE_CONFIGURATION)
-def did_change_configuration(ls, settings: types.DidChangeConfigurationParams):
+def did_change_configuration(ls: LanguageServer, settings: types.DidChangeConfigurationParams):
     if not settings.settings or not hasattr(settings.settings, 'anakinls'):
         return
     settings = settings.settings.anakinls
@@ -331,10 +329,10 @@ def did_change_configuration(ls, settings: types.DidChangeConfigurationParams):
 
 
 @server.feature(TEXT_DOCUMENT_WILL_SAVE)
-def will_save(ls, params: types.WillSaveTextDocumentParams):
+def will_save(ls: LanguageServer, params: types.WillSaveTextDocumentParams):
     pass
 
 
 @server.feature(TEXT_DOCUMENT_DID_SAVE)
-def did_save(ls, params: types.DidSaveTextDocumentParams):
+def did_save(ls: LanguageServer, params: types.DidSaveTextDocumentParams):
     _validate(ls, params.textDocument.uri)
