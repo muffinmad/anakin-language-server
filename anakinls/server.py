@@ -44,7 +44,8 @@ jediProject = None
 config = {
     'pyflakes_errors': [
         'UndefinedName'
-    ]
+    ],
+    'help_on_hover': True
 }
 
 
@@ -258,11 +259,11 @@ def completions(ls: LanguageServer, params: types.CompletionParams = None):
 @server.feature(HOVER)
 def hover(ls: LanguageServer, params: types.TextDocumentPositionParams) -> types.Hover:
     script = get_script(ls, params.textDocument.uri)
-    infer = script.infer(params.position.line + 1, params.position.character)
-    if infer:
-        result = infer[0].docstring()
-        if result:
-            return types.Hover(types.MarkupContent(types.MarkupKind.PlainText, result))
+    fn = script.help if config['help_on_hover'] else script.infer
+    names = fn(params.position.line + 1, params.position.character)
+    result = '\n----------\n'.join(x.docstring() for x in names)
+    if result:
+        return types.Hover(types.MarkupContent(types.MarkupKind.PlainText, result))
 
 
 @server.feature(SIGNATURE_HELP)
