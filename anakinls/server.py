@@ -326,7 +326,9 @@ def did_change_configuration(ls: LanguageServer, settings: types.DidChangeConfig
         return
     settings = settings.settings.anakinls
     if hasattr(settings, 'pyflakes_errors'):
-        ls.config['pyflakes_errors'] = settings.pyflakes_errors
+        config['pyflakes_errors'] = settings.pyflakes_errors
+    if hasattr(settings, 'help_on_hover'):
+        config['help_on_hover'] = settings.help_on_hover
 
 
 @server.feature(TEXT_DOCUMENT_WILL_SAVE)
