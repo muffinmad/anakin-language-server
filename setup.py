@@ -17,10 +17,10 @@ setup(
     packages=['anakinls'],
     python_requires='>=3.6',
     install_requires=[
-        'jedi==0.17.0',
-        'pygls==0.9.0',
-        'pyflakes==2.2.0',
-        'pycodestyle==2.5.0'
+        'jedi~=0.17',
+        'pygls~=0.9',
+        'pyflakes~=2.2',
+        'pycodestyle~=2.5'
     ],
     entry_points={
         'console_scripts': [
