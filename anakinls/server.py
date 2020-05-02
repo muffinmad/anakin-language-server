@@ -266,7 +266,7 @@ def hover(ls: LanguageServer, params: types.TextDocumentPositionParams) -> types
         return types.Hover(types.MarkupContent(types.MarkupKind.PlainText, result))
 
 
-@server.feature(SIGNATURE_HELP)
+@server.feature(SIGNATURE_HELP, trigger_characters=['(', ','])
 def signature_help(ls: LanguageServer, params: types.TextDocumentPositionParams) -> types.SignatureHelp:
     script = get_script(ls, params.textDocument.uri)
     signatures = script.get_signatures(params.position.line + 1, params.position.character)
