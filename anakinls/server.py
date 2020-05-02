@@ -103,7 +103,7 @@ class PyflakesReporter:
         self.result.append(types.Diagnostic(
             types.Range(
                 types.Position(line, message.col),
-                types.Position(line, len(self._get_codeline(line)) - message.col)
+                types.Position(line, len(self._get_codeline(line)))
             ),
             message.message % message.message_args,
             severity,
@@ -125,7 +125,7 @@ class CodestyleReport(CodestyleBaseReport):
         self.result.append(types.Diagnostic(
             types.Range(
                 types.Position(line, offset),
-                types.Position(line, len(self.lines[line].rstrip('\n\r')) - offset)
+                types.Position(line, len(self.lines[line].rstrip('\n\r')))
             ),
             text,
             types.DiagnosticSeverity.Warning,
