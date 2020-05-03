@@ -40,6 +40,7 @@ foo'''
     item = completion.items[0]
     assert item.insertText is None
     assert item.label == 'foo'
+    assert item.sortText == 'aafoo'
     assert item.insertTextFormat is None
     item = completion.items[1]
     assert item.label == 'foo(a, b)'

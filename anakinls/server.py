@@ -228,19 +228,21 @@ def completions(ls: LanguageServer, params: types.CompletionParams = None):
         params.position.character
     )
 
-    def _key(completion):
-        return (
-            completion.name.startswith('__'),
-            completion.name.startswith('_'),
-            completion.name
-        )
+    def sort_key(completion):
+        name = completion.name
+        if name.startswith('__'):
+            return f'zz{name}'
+        if name.startswith('_'):
+            return f'za{name}'
+        return f'aa{name}'
 
     def _completions():
-        for completion in sorted(completions, key=_key):
+        for completion in completions:
             item = dict(
                 label=completion.name,
                 kind=get_completion_kind(ls, completion.type),
-                documentation=completion.docstring(raw=True)
+                documentation=completion.docstring(raw=True),
+                sort_text=sort_key(completion)
             )
             yield types.CompletionItem(**item)
             for signature in completion.get_signatures():
