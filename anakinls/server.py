@@ -42,6 +42,21 @@ class AnakinLanguageServerProtocol(LanguageServerProtocol):
 
     def bf_initialize(self, params: types.InitializeParams) -> types.InitializeResult:
         result = super().bf_initialize(params)
+
+        global jediEnvironment
+        global jediProject
+        venv = getattr(params.initializationOptions, 'venv', None)
+        if venv:
+            jediEnvironment = create_environment(venv, False)
+        else:
+            jediEnvironment = get_default_environment()
+        jediProject = get_default_project(getattr(params, 'rootPath', None))
+        logging.info(f'Jedi environment python: {jediEnvironment.executable}')
+        logging.info('Jedi environment sys_path:')
+        for p in jediEnvironment.get_sys_path():
+            logging.info(f'  {p}')
+        logging.info(f'Jedi project path: {jediProject._path}')
+
         result.capabilities.textDocumentSync = types.TextDocumentSyncOptions(
             open_close=True,
             change=types.TextDocumentSyncKind.INCREMENTAL,
@@ -176,23 +191,6 @@ def _validate(ls: LanguageServer, uri: str):
     ).check_all()
 
     ls.publish_diagnostics(uri, result)
-
-
-@server.feature(INITIALIZE)
-def initialize(ls: LanguageServer, params: types.InitializeParams):
-    global jediEnvironment
-    global jediProject
-    venv = getattr(params.initializationOptions, 'venv', None)
-    if venv:
-        jediEnvironment = create_environment(venv, False)
-    else:
-        jediEnvironment = get_default_environment()
-    jediProject = get_default_project(getattr(params, 'rootPath', None))
-    logging.info(f'Jedi environment python: {jediEnvironment.executable}')
-    logging.info('Jedi environment sys_path:')
-    for p in jediEnvironment.get_sys_path():
-        logging.info(f'  {p}')
-    logging.info(f'Jedi project path: {jediProject._path}')
 
 
 @server.feature(TEXT_DOCUMENT_DID_OPEN)
