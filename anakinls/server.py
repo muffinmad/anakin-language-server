@@ -19,6 +19,7 @@ from pygls.features import (COMPLETION, TEXT_DOCUMENT_DID_CHANGE,
                             TEXT_DOCUMENT_WILL_SAVE, TEXT_DOCUMENT_DID_SAVE)
 from pygls import types
 from pygls.server import LanguageServer
+from pygls.protocol import LanguageServerProtocol
 from pygls.uris import from_fs_path
 
 
@@ -37,7 +38,19 @@ _COMPLETION_TYPES = {
 jedi_settings.case_insensitive_completion = False
 
 
-server = LanguageServer()
+class AnakinLanguageServerProtocol(LanguageServerProtocol):
+
+    def bf_initialize(self, params: types.InitializeParams) -> types.InitializeResult:
+        result = super().bf_initialize(params)
+        result.capabilities.textDocumentSync = types.TextDocumentSyncOptions(
+            open_close=True,
+            change=types.TextDocumentSyncKind.INCREMENTAL,
+            save=True
+        )
+        return result
+
+
+server = LanguageServer(protocol_cls=AnakinLanguageServerProtocol)
 scripts = {}
 jediEnvironment = None
 jediProject = None
