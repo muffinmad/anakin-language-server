@@ -21,7 +21,7 @@ from pygls.features import (COMPLETION, TEXT_DOCUMENT_DID_CHANGE,
 from pygls import types
 from pygls.server import LanguageServer
 from pygls.protocol import LanguageServerProtocol
-from pygls.uris import from_fs_path
+from pygls.uris import from_fs_path, to_fs_path
 
 
 _COMPLETION_TYPES = {
@@ -69,6 +69,7 @@ class AnakinLanguageServerProtocol(LanguageServerProtocol):
 
 server = LanguageServer(protocol_cls=AnakinLanguageServerProtocol)
 scripts = {}
+pycodestyleOptions = {}
 jediEnvironment = None
 jediProject = None
 config = {
@@ -164,6 +165,25 @@ class CodestyleReport(CodestyleBaseReport):
         ))
 
 
+def get_pycodestyle_options(ls: LanguageServer, uri: str):
+    # find workspace folder uri belongs to
+    folders = sorted(
+        (f.uri
+         for f in ls.workspace.folders.values()
+         if uri.startswith(f.uri)),
+        key=len, reverse=True
+    )
+    if folders:
+        folder = folders[0]
+    else:
+        folder = ls.workspace.root_uri
+    result = pycodestyleOptions.get(folder)
+    if not result:
+        result = CodestyleStyleGuide(paths=[to_fs_path(folder)]).options
+        pycodestyleOptions[folder] = result
+    return result
+
+
 def _validate(ls: LanguageServer, uri: str):
     # Jedi
     script = get_script(ls, uri)
@@ -188,7 +208,7 @@ def _validate(ls: LanguageServer, uri: str):
                    PyflakesReporter(result, script, config['pyflakes_errors']))
 
     # pycodestyle
-    codestyleopts = CodestyleStyleGuide().options
+    codestyleopts = get_pycodestyle_options(ls, uri)
     CodestyleChecker(
         script.path, script._code.splitlines(True), codestyleopts,
         CodestyleReport(codestyleopts, result)

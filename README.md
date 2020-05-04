@@ -33,7 +33,7 @@ Diagnostics providers:
 
 - Jedi. See [get\_syntax\_errors](https://jedi.readthedocs.io/en/latest/docs/api.html#jedi.Script.get_syntax_errors).
 - pyflakes
-- pycodestyle
+- pycodestyle. Server restart is needed after changing one of the [configuration files](https://pycodestyle.pycqa.org/en/latest/intro.html#configuration).
 
 ## Configuration options
 
