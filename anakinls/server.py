@@ -1,7 +1,7 @@
 import logging
 
 from inspect import Parameter
-from typing import List
+from typing import List, Dict, Optional, Any
 
 from jedi import (Script, create_environment, get_default_environment,
                   settings as jedi_settings, get_default_project)
@@ -68,8 +68,8 @@ class AnakinLanguageServerProtocol(LanguageServerProtocol):
 
 
 server = LanguageServer(protocol_cls=AnakinLanguageServerProtocol)
-scripts = {}
-pycodestyleOptions = {}
+scripts: Dict[str, Script] = {}
+pycodestyleOptions: Dict[str, Any] = {}
 jediEnvironment = None
 jediProject = None
 config = {
@@ -244,7 +244,7 @@ def get_completion_kind(
 
 
 @server.feature(COMPLETION, trigger_characters=['.'])
-def completions(ls: LanguageServer, params: types.CompletionParams = None):
+def completions(ls: LanguageServer, params: types.CompletionParams):
     script = get_script(ls, params.textDocument.uri)
     completions = script.complete(
         params.position.line + 1,
@@ -300,7 +300,7 @@ def completions(ls: LanguageServer, params: types.CompletionParams = None):
 
 @server.feature(HOVER)
 def hover(ls: LanguageServer,
-          params: types.TextDocumentPositionParams) -> types.Hover:
+          params: types.TextDocumentPositionParams) -> Optional[types.Hover]:
     script = get_script(ls, params.textDocument.uri)
     fn = script.help if config['help_on_hover'] else script.infer
     names = fn(params.position.line + 1, params.position.character)
@@ -309,12 +309,14 @@ def hover(ls: LanguageServer,
         return types.Hover(
             types.MarkupContent(types.MarkupKind.PlainText, result)
         )
+    return None
 
 
 @server.feature(SIGNATURE_HELP, trigger_characters=['(', ','])
 def signature_help(
         ls: LanguageServer,
-        params: types.TextDocumentPositionParams) -> types.SignatureHelp:
+        params: types.TextDocumentPositionParams
+) -> Optional[types.SignatureHelp]:
     script = get_script(ls, params.textDocument.uri)
     signatures = script.get_signatures(params.position.line + 1,
                                        params.position.character)
@@ -339,6 +341,7 @@ def signature_help(
         i += 1
     if result:
         return types.SignatureHelp([result[idx]], 0, param_idx)
+    return None
 
 
 def _get_locations(defs: List[Name]) -> List[types.Location]:
@@ -377,11 +380,9 @@ def did_change_configuration(ls: LanguageServer,
                              settings: types.DidChangeConfigurationParams):
     if not settings.settings or not hasattr(settings.settings, 'anakinls'):
         return
-    settings = settings.settings.anakinls
-    if hasattr(settings, 'pyflakes_errors'):
-        config['pyflakes_errors'] = settings.pyflakes_errors
-    if hasattr(settings, 'help_on_hover'):
-        config['help_on_hover'] = settings.help_on_hover
+    for k in config:
+        if hasattr(settings.settings.anakinls, k):
+            config[k] = getattr(settings.settings.anakinls, k)
 
 
 @server.feature(TEXT_DOCUMENT_WILL_SAVE)
