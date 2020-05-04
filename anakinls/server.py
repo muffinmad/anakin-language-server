@@ -7,14 +7,15 @@ from jedi import (Script, create_environment, get_default_environment,
                   settings as jedi_settings, get_default_project)
 from jedi.api.classes import Name
 
-from pycodestyle import (BaseReport as CodestyleBaseReport, Checker as CodestyleChecker,
+from pycodestyle import (BaseReport as CodestyleBaseReport,
+                         Checker as CodestyleChecker,
                          StyleGuide as CodestyleStyleGuide)
 
 from pyflakes.api import check as pyflakes_check
 
 from pygls.features import (COMPLETION, TEXT_DOCUMENT_DID_CHANGE,
                             TEXT_DOCUMENT_DID_CLOSE, TEXT_DOCUMENT_DID_OPEN,
-                            INITIALIZE, HOVER, SIGNATURE_HELP, DEFINITION,
+                            HOVER, SIGNATURE_HELP, DEFINITION,
                             REFERENCES, WORKSPACE_DID_CHANGE_CONFIGURATION,
                             TEXT_DOCUMENT_WILL_SAVE, TEXT_DOCUMENT_DID_SAVE)
 from pygls import types
@@ -40,7 +41,8 @@ jedi_settings.case_insensitive_completion = False
 
 class AnakinLanguageServerProtocol(LanguageServerProtocol):
 
-    def bf_initialize(self, params: types.InitializeParams) -> types.InitializeResult:
+    def bf_initialize(
+            self, params: types.InitializeParams) -> types.InitializeResult:
         result = super().bf_initialize(params)
 
         global jediEnvironment
@@ -182,19 +184,21 @@ def _validate(ls: LanguageServer, uri: str):
         return
 
     # pyflakes
-    pyflakes_check(script._code, script.path, PyflakesReporter(result, script, config['pyflakes_errors']))
+    pyflakes_check(script._code, script.path,
+                   PyflakesReporter(result, script, config['pyflakes_errors']))
 
     # pycodestyle
     codestyleopts = CodestyleStyleGuide().options
     CodestyleChecker(
-        script.path, script._code.splitlines(True), codestyleopts, CodestyleReport(codestyleopts, result)
+        script.path, script._code.splitlines(True), codestyleopts,
+        CodestyleReport(codestyleopts, result)
     ).check_all()
 
     ls.publish_diagnostics(uri, result)
 
 
 @server.feature(TEXT_DOCUMENT_DID_OPEN)
-async def did_open(ls: LanguageServer, params: types.DidOpenTextDocumentParams):
+def did_open(ls: LanguageServer, params: types.DidOpenTextDocumentParams):
     _validate(ls, params.textDocument.uri)
 
 
@@ -211,7 +215,8 @@ def did_change(ls: LanguageServer, params: types.DidChangeTextDocumentParams):
     get_script(ls, params.textDocument.uri, True)
 
 
-def get_completion_kind(ls: LanguageServer, completion_type: str) -> types.CompletionItemKind:
+def get_completion_kind(
+        ls: LanguageServer, completion_type: str) -> types.CompletionItemKind:
     if completion_type not in _COMPLETION_TYPES:
         ls.show_message(f'Unknown completion type {completion_type}')
         return types.CompletionItemKind.Text
@@ -247,7 +252,9 @@ def completions(ls: LanguageServer, params: types.CompletionParams = None):
                 names = []
                 snippets = []
                 for i, param in enumerate(signature.params):
-                    if '=' in param.description or param.kind == Parameter.VAR_KEYWORD:
+                    if param.kind == Parameter.VAR_KEYWORD:
+                        break
+                    if '=' in param.description:
                         break
                     if param.name == '/':
                         continue
@@ -256,7 +263,9 @@ def completions(ls: LanguageServer, params: types.CompletionParams = None):
                         snippet_prefix = f'{param.name}='
                     else:
                         snippet_prefix = ''
-                    snippets.append(f'{snippet_prefix}${{{i + 1}:{param.name}}}')
+                    snippets.append(
+                        f'{snippet_prefix}${{{i + 1}:{param.name}}}'
+                    )
                 names_str = ', '.join(names)
                 snippets_str = ', '.join(snippets)
                 yield types.CompletionItem(**dict(
@@ -270,19 +279,25 @@ def completions(ls: LanguageServer, params: types.CompletionParams = None):
 
 
 @server.feature(HOVER)
-def hover(ls: LanguageServer, params: types.TextDocumentPositionParams) -> types.Hover:
+def hover(ls: LanguageServer,
+          params: types.TextDocumentPositionParams) -> types.Hover:
     script = get_script(ls, params.textDocument.uri)
     fn = script.help if config['help_on_hover'] else script.infer
     names = fn(params.position.line + 1, params.position.character)
     result = '\n----------\n'.join(x.docstring() for x in names)
     if result:
-        return types.Hover(types.MarkupContent(types.MarkupKind.PlainText, result))
+        return types.Hover(
+            types.MarkupContent(types.MarkupKind.PlainText, result)
+        )
 
 
 @server.feature(SIGNATURE_HELP, trigger_characters=['(', ','])
-def signature_help(ls: LanguageServer, params: types.TextDocumentPositionParams) -> types.SignatureHelp:
+def signature_help(
+        ls: LanguageServer,
+        params: types.TextDocumentPositionParams) -> types.SignatureHelp:
     script = get_script(ls, params.textDocument.uri)
-    signatures = script.get_signatures(params.position.line + 1, params.position.character)
+    signatures = script.get_signatures(params.position.line + 1,
+                                       params.position.character)
 
     result = []
     idx = -1
@@ -320,21 +335,26 @@ def _get_locations(defs: List[Name]) -> List[types.Location]:
 
 
 @server.feature(DEFINITION)
-def definition(ls: LanguageServer, params: types.TextDocumentPositionParams) -> List[types.Location]:
+def definition(
+        ls: LanguageServer,
+        params: types.TextDocumentPositionParams) -> List[types.Location]:
     script = get_script(ls, params.textDocument.uri)
     defs = script.goto(params.position.line + 1, params.position.character)
     return _get_locations(defs)
 
 
 @server.feature(REFERENCES)
-def references(ls: LanguageServer, params: types.ReferenceParams) -> List[types.Location]:
+def references(ls: LanguageServer,
+               params: types.ReferenceParams) -> List[types.Location]:
     script = get_script(ls, params.textDocument.uri)
-    refs = script.get_references(params.position.line + 1, params.position.character)
+    refs = script.get_references(params.position.line + 1,
+                                 params.position.character)
     return _get_locations(refs)
 
 
 @server.feature(WORKSPACE_DID_CHANGE_CONFIGURATION)
-def did_change_configuration(ls: LanguageServer, settings: types.DidChangeConfigurationParams):
+def did_change_configuration(ls: LanguageServer,
+                             settings: types.DidChangeConfigurationParams):
     if not settings.settings or not hasattr(settings.settings, 'anakinls'):
         return
     settings = settings.settings.anakinls
