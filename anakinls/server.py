@@ -30,7 +30,6 @@ _COMPLETION_TYPES = {
     'instance': types.CompletionItemKind.Reference,
     'function': types.CompletionItemKind.Function,
     'param': types.CompletionItemKind.Variable,
-    'path': types.CompletionItemKind.Text,
     'keyword': types.CompletionItemKind.Keyword,
     'statement': types.CompletionItemKind.Keyword
 }
@@ -314,14 +313,6 @@ def did_change(ls: LanguageServer, params: types.DidChangeTextDocumentParams):
     get_script(ls, params.textDocument.uri, True)
 
 
-def get_completion_kind(
-        ls: LanguageServer, completion_type: str) -> types.CompletionItemKind:
-    if completion_type not in _COMPLETION_TYPES:
-        ls.show_message(f'Unknown completion type {completion_type}')
-        return types.CompletionItemKind.Text
-    return _COMPLETION_TYPES[completion_type]
-
-
 @server.feature(COMPLETION, trigger_characters=['.'])
 def completions(ls: LanguageServer, params: types.CompletionParams):
     script = get_script(ls, params.textDocument.uri)
@@ -342,7 +333,8 @@ def completions(ls: LanguageServer, params: types.CompletionParams):
         for completion in completions:
             item = dict(
                 label=completion.name,
-                kind=get_completion_kind(ls, completion.type),
+                kind=_COMPLETION_TYPES.get(completion.type,
+                                           types.CompletionItemKind.Text),
                 documentation=completion.docstring(raw=True),
                 sort_text=sort_key(completion)
             )
