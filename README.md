@@ -9,6 +9,9 @@ Yet another Jedi Python language server
 - pyflakes ~= 2.2
 - pycodestyle ~= 2.5
 
+## Optional requirements
+- mypy
+
 ## Implemented features
 
 - `textDocument/completion`
@@ -31,9 +34,18 @@ Diagnostics are published on document open and save.
 
 Diagnostics providers:
 
-- Jedi. See [get\_syntax\_errors](https://jedi.readthedocs.io/en/latest/docs/api.html#jedi.Script.get_syntax_errors).
-- pyflakes
-- pycodestyle. Server restart is needed after changing one of the [configuration files](https://pycodestyle.pycqa.org/en/latest/intro.html#configuration).
+- **Jedi**
+
+  See [get\_syntax\_errors](https://jedi.readthedocs.io/en/latest/docs/api.html#jedi.Script.get_syntax_errors).
+
+- **pyflakes**
+- **pycodestyle**
+
+  Server restart is needed after changing one of the [configuration files](https://pycodestyle.pycqa.org/en/latest/intro.html#configuration).
+
+- **mypy**
+
+  Install `mypy` in the same environment as `anakinls` and set `mypy_enabled` configuration option.
 
 ## Configuration options
 
@@ -41,9 +53,14 @@ Configuration options must be passed under `anakinls` key in `workspace/didChang
 
 Available options:
 - `pyflakes_errors` - Diagnostic severity will be set to `Error` if Pyflakes message class name is in this list. See [Pyflakes messages](https://github.com/PyCQA/pyflakes/blob/master/pyflakes/messages.py).
+
   Default: `['UndefinedName']`.
 - `help_on_hover` - Use [`help`](https://jedi.readthedocs.io/en/latest/docs/api.html#jedi.Script.help) instead of [`infer`](https://jedi.readthedocs.io/en/latest/docs/api.html#jedi.Script.infer) for `textDocument/hover`.
+
   Default: `True`.
+- `mypy_enabled` - Use [`mypy`](https://mypy.readthedocs.io/en/stable/index.html) to provide diagnostics.
+
+  Default: `False`.
 
 ## Example
 

@@ -70,13 +70,15 @@ class AnakinLanguageServerProtocol(LanguageServerProtocol):
 server = LanguageServer(protocol_cls=AnakinLanguageServerProtocol)
 scripts: Dict[str, Script] = {}
 pycodestyleOptions: Dict[str, Any] = {}
+mypyConfigs: Dict[str, str] = {}
 jediEnvironment = None
 jediProject = None
 config = {
     'pyflakes_errors': [
         'UndefinedName'
     ],
-    'help_on_hover': True
+    'help_on_hover': True,
+    'mypy_enabled': False
 }
 
 
@@ -165,7 +167,7 @@ class CodestyleReport(CodestyleBaseReport):
         ))
 
 
-def get_pycodestyle_options(ls: LanguageServer, uri: str):
+def _get_workspace_folder_path(ls: LanguageServer, uri: str) -> str:
     # find workspace folder uri belongs to
     folders = sorted(
         (f.uri
@@ -174,13 +176,83 @@ def get_pycodestyle_options(ls: LanguageServer, uri: str):
         key=len, reverse=True
     )
     if folders:
-        folder = folders[0]
-    else:
-        folder = ls.workspace.root_uri
+        return to_fs_path(folders[0])
+    return ls.workspace.root_path
+
+
+def get_pycodestyle_options(ls: LanguageServer, uri: str):
+    folder = _get_workspace_folder_path(ls, uri)
     result = pycodestyleOptions.get(folder)
     if not result:
-        result = CodestyleStyleGuide(paths=[to_fs_path(folder)]).options
+        result = CodestyleStyleGuide(paths=[folder]).options
         pycodestyleOptions[folder] = result
+    return result
+
+
+def get_mypy_config(ls: LanguageServer, uri: str) -> Optional[str]:
+    folder = _get_workspace_folder_path(ls, uri)
+    if folder in mypyConfigs:
+        return mypyConfigs[folder]
+    import os
+    from mypy.defaults import CONFIG_FILES
+    result = ''
+    for filename in CONFIG_FILES:
+        filename = os.path.expanduser(filename)
+        if not os.path.isabs(filename):
+            filename = os.path.join(folder, filename)
+        if os.path.exists(filename):
+            result = filename
+            break
+    mypyConfigs[folder] = result
+    return result
+
+
+def _mypy_check(ls: LanguageServer, uri: str, script: Script,
+                result: List[types.Diagnostic]):
+    from mypy import api
+    assert jediEnvironment is not None
+    version_info = jediEnvironment.version_info
+    filename = to_fs_path(uri)
+    lines = api.run([
+        '--python-executable', jediEnvironment.executable,
+        '--python-version', f'{version_info.major}.{version_info.minor}',
+        '--config-file', get_mypy_config(ls, uri),
+        '--hide-error-context',
+        '--show-column-numbers',
+        '--show-error-codes',
+        '--no-pretty',
+        '--show-absolute-path',
+        '--no-error-summary',
+        filename
+    ])
+    if lines[1]:
+        ls.show_message(lines[1], types.MessageType.Error)
+        return
+
+    for line in lines[0].split('\n'):
+        parts = line.split(':', 4)
+        if len(parts) < 5:
+            continue
+        fn, row, column, err_type, message = parts
+        if fn != filename:
+            continue
+        row = int(row) - 1
+        column = int(column) - 1
+        if err_type.strip() == 'note':
+            severity = types.DiagnosticSeverity.Hint
+        else:
+            severity = types.DiagnosticSeverity.Warning
+        result.append(
+            types.Diagnostic(
+                types.Range(
+                    types.Position(row, column),
+                    types.Position(row, len(script._code_lines[row]))
+                ),
+                message.strip(),
+                severity,
+                source='mypy'
+            )
+        )
     return result
 
 
@@ -213,6 +285,13 @@ def _validate(ls: LanguageServer, uri: str):
         script.path, script._code.splitlines(True), codestyleopts,
         CodestyleReport(codestyleopts, result)
     ).check_all()
+
+    if config['mypy_enabled']:
+        try:
+            _mypy_check(ls, uri, script, result)
+        except Exception as e:
+            ls.show_message(f'mypy check error: {e}',
+                            types.MessageType.Warning)
 
     ls.publish_diagnostics(uri, result)
 
