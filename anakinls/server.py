@@ -62,7 +62,7 @@ class AnakinLanguageServerProtocol(LanguageServerProtocol):
         result.capabilities.textDocumentSync = types.TextDocumentSyncOptions(
             open_close=True,
             change=types.TextDocumentSyncKind.INCREMENTAL,
-            save=True
+            save=types.SaveOptions()
         )
         return result
 
