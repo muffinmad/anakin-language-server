@@ -455,11 +455,19 @@ def did_change_configuration(ls: LanguageServer,
                              settings: types.DidChangeConfigurationParams):
     if not settings.settings or not hasattr(settings.settings, 'anakinls'):
         return
+    changed = set()
     for k in config:
         if hasattr(settings.settings.anakinls, k):
             config[k] = getattr(settings.settings.anakinls, k)
-            if k == 'pycodestyle_config':
-                pycodestyleOptions.clear()
+            if k != 'help_on_hover':
+                changed.add(k)
+    if 'pycodestyle_config' in changed:
+        pycodestyleOptions.clear()
+    if 'mypy_enabled' in changed:
+        mypyConfigs.clear()
+    if changed:
+        for uri in ls.workspace.documents:
+            _validate(ls, uri)
 
 
 @server.feature(TEXT_DOCUMENT_WILL_SAVE)
