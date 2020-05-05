@@ -76,6 +76,7 @@ config = {
     'pyflakes_errors': [
         'UndefinedName'
     ],
+    'pycodestyle_config': None,
     'help_on_hover': True,
     'mypy_enabled': False
 }
@@ -183,7 +184,10 @@ def get_pycodestyle_options(ls: LanguageServer, uri: str):
     folder = _get_workspace_folder_path(ls, uri)
     result = pycodestyleOptions.get(folder)
     if not result:
-        result = CodestyleStyleGuide(paths=[folder]).options
+        result = CodestyleStyleGuide(
+            paths=[folder],
+            config_file=config['pycodestyle_config']
+        ).options
         pycodestyleOptions[folder] = result
     return result
 
@@ -454,6 +458,8 @@ def did_change_configuration(ls: LanguageServer,
     for k in config:
         if hasattr(settings.settings.anakinls, k):
             config[k] = getattr(settings.settings.anakinls, k)
+            if k == 'pycodestyle_config':
+                pycodestyleOptions.clear()
 
 
 @server.feature(TEXT_DOCUMENT_WILL_SAVE)

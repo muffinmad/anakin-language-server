@@ -55,14 +55,20 @@ Available options:
 - `pyflakes_errors` - Diagnostic severity will be set to `Error` if Pyflakes message class name is in this list. See [Pyflakes messages](https://github.com/PyCQA/pyflakes/blob/master/pyflakes/messages.py).
 
   Default: `['UndefinedName']`.
+
 - `help_on_hover` - Use [`help`](https://jedi.readthedocs.io/en/latest/docs/api.html#jedi.Script.help) instead of [`infer`](https://jedi.readthedocs.io/en/latest/docs/api.html#jedi.Script.infer) for `textDocument/hover`.
 
   Default: `True`.
+
 - `mypy_enabled` - Use [`mypy`](https://mypy.readthedocs.io/en/stable/index.html) to provide diagnostics.
 
   Default: `False`.
 
-## Example
+- `pycodestyle_config` - In addition to project and user level config, specify pycodestyle config file. Same as `--config` option for `pycodestyle`.
+
+  Default: `None`.
+
+## Configuration example
 
 Here is [eglot](https://github.com/joaotavora/eglot) configuration:
 
