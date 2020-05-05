@@ -1,5 +1,9 @@
 # NEWS
 
+## 1.3.2
+
+- Provide `textEdit` for `CompletionItem`
+
 ## 1.3.1
 
 - Possibility to specify pycodestyle config file

@@ -324,6 +324,9 @@ def completions(ls: LanguageServer, params: types.CompletionParams):
         params.position.line + 1,
         params.position.character
     )
+    position = types.Position(params.position.line,
+                              params.position.character)
+    r = types.Range(position, position)
 
     def sort_key(completion):
         name = completion.name
@@ -342,7 +345,10 @@ def completions(ls: LanguageServer, params: types.CompletionParams):
                 documentation=completion.docstring(raw=True),
                 sort_text=sort_key(completion)
             )
-            yield types.CompletionItem(**item)
+            yield types.CompletionItem(
+                text_edit=types.TextEdit(r, completion.complete),
+                **item
+            )
             for signature in completion.get_signatures():
                 names = []
                 snippets = []
@@ -367,7 +373,7 @@ def completions(ls: LanguageServer, params: types.CompletionParams):
                     item,
                     label=f'{completion.name}({names_str})',
                     insert_text=f'{completion.name}({snippets_str})$0',
-                    insert_text_format=2
+                    insert_text_format=types.InsertTextFormat.Snippet
                 ))
 
     return types.CompletionList(False, list(_completions()))
