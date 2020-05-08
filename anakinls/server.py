@@ -3,15 +3,16 @@ import logging
 from inspect import Parameter
 from typing import List, Dict, Optional, Any
 
-from jedi import (Script, create_environment, get_default_environment,
+from jedi import (Script, create_environment,  # type: ignore
+                  get_default_environment,
                   settings as jedi_settings, get_default_project)
-from jedi.api.classes import Name
+from jedi.api.classes import Name  # type: ignore
 
-from pycodestyle import (BaseReport as CodestyleBaseReport,
+from pycodestyle import (BaseReport as CodestyleBaseReport,  # type: ignore
                          Checker as CodestyleChecker,
                          StyleGuide as CodestyleStyleGuide)
 
-from pyflakes.api import check as pyflakes_check
+from pyflakes.api import check as pyflakes_check  # type: ignore
 
 from pygls.features import (COMPLETION, TEXT_DOCUMENT_DID_CHANGE,
                             TEXT_DOCUMENT_DID_CLOSE, TEXT_DOCUMENT_DID_OPEN,
