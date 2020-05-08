@@ -18,7 +18,8 @@ from pygls.features import (COMPLETION, TEXT_DOCUMENT_DID_CHANGE,
                             TEXT_DOCUMENT_DID_CLOSE, TEXT_DOCUMENT_DID_OPEN,
                             HOVER, SIGNATURE_HELP, DEFINITION,
                             REFERENCES, WORKSPACE_DID_CHANGE_CONFIGURATION,
-                            TEXT_DOCUMENT_WILL_SAVE, TEXT_DOCUMENT_DID_SAVE)
+                            TEXT_DOCUMENT_WILL_SAVE, TEXT_DOCUMENT_DID_SAVE,
+                            DOCUMENT_SYMBOL)
 from pygls import types
 from pygls.server import LanguageServer
 from pygls.protocol import LanguageServerProtocol
@@ -485,3 +486,55 @@ def will_save(ls: LanguageServer, params: types.WillSaveTextDocumentParams):
 @server.feature(TEXT_DOCUMENT_DID_SAVE)
 def did_save(ls: LanguageServer, params: types.DidSaveTextDocumentParams):
     _validate(ls, params.textDocument.uri)
+
+
+_DOCUMENT_SYMBOL_KINDS = {
+    'module': types.SymbolKind.Module,
+    'class': types.SymbolKind.Class,
+    'function': types.SymbolKind.Function,
+    'statement': types.SymbolKind.Variable
+}
+
+
+def _get_document_symbols(
+        code_lines: List[str],
+        names: List[Name],
+        current: Optional[Name] = None
+) -> Optional[List[types.DocumentSymbol]]:
+    # Looks like names are sorted by order of appearance, so
+    # children are after their parents
+    result = []
+    while names:
+        if current and names[0].parent() != current:
+            break
+        name = names.pop(0)
+        if name.type == 'param':
+            continue
+        children = _get_document_symbols(
+            code_lines,
+            names,
+            name
+        )
+        line = name.line - 1
+        r = types.Range(
+            types.Position(line, name.column),
+            types.Position(line, len(code_lines[line]) - 1)
+        )
+        result.append(types.DocumentSymbol(
+            name.name,
+            _DOCUMENT_SYMBOL_KINDS.get(name.type, types.SymbolKind.Null),
+            r,
+            r,
+            children=children or None
+        ))
+    return result
+
+
+@server.feature(DOCUMENT_SYMBOL)
+def document_symbol(ls: LanguageServer, params: types.DocumentSymbolParams):
+    script = get_script(ls, params.textDocument.uri)
+    result = _get_document_symbols(
+        script._code_lines,
+        script.get_names(all_scopes=True)
+    )
+    return result
