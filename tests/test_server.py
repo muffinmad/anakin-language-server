@@ -2,7 +2,7 @@ import pytest
 
 from unittest.mock import Mock
 
-from anakinls.server import completions, hover
+from anakinls import server as aserver
 
 from pygls import types
 from pygls.workspace import Document, Workspace
@@ -29,7 +29,8 @@ def foo(a, *, b, c=None):
 foo'''
     doc = Document(uri, content)
     server.workspace.get_document = Mock(return_value=doc)
-    completion = completions(
+    aserver.completionFunction = aserver._completions_snippets
+    completion = aserver.completions(
         server,
         types.CompletionParams(
             types.TextDocumentIdentifier(uri),
@@ -58,7 +59,9 @@ def foo(a, *, b, c=None):
 foo'''
     doc = Document(uri, content)
     server.workspace.get_document = Mock(return_value=doc)
-    h = hover(server, types.TextDocumentPositionParams(doc, types.Position(5, 0)))
+    h = aserver.hover(server, types.TextDocumentPositionParams(
+        doc,
+        types.Position(5, 0)))
     assert h is not None
     assert isinstance(h.contents, types.MarkupContent)
     assert h.contents.kind == types.MarkupKind.PlainText
