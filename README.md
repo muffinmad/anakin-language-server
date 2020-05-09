@@ -20,6 +20,7 @@ Yet another Jedi Python language server
 - `textDocument/definition`
 - `textDocument/references`
 - `textDocument/publishDiagnostics`
+- `textDocument/documentSymbol`
 
 ## Initialization option
 

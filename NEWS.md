@@ -1,5 +1,10 @@
 # NEWS
 
+## 1.4
+
+- Implement `textDocument/documentSymbol`
+- Don't return snippets in completions if client doesn't support them
+
 ## 1.3.2
 
 - Provide `textEdit` for `CompletionItem`

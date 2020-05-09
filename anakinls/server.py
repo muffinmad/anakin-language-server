@@ -1,12 +1,12 @@
 import logging
 
 from inspect import Parameter
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Iterator, Callable, Union
 
 from jedi import (Script, create_environment,  # type: ignore
                   get_default_environment,
                   settings as jedi_settings, get_default_project)
-from jedi.api.classes import Name  # type: ignore
+from jedi.api.classes import Name, Completion  # type: ignore
 
 from pycodestyle import (BaseReport as CodestyleBaseReport,  # type: ignore
                          Checker as CodestyleChecker,
@@ -40,14 +40,22 @@ _COMPLETION_TYPES = {
 jedi_settings.case_insensitive_completion = False
 
 
+completionFunction: Callable[[List[Completion], types.Range],
+                             Iterator[types.CompletionItem]]
+documentSymbolFunction: Union[
+    Callable[[str, List[str], List[Name]], List[types.DocumentSymbol]],
+    Callable[[str, List[str], List[Name]], List[types.SymbolInformation]]]
+
+
 class AnakinLanguageServerProtocol(LanguageServerProtocol):
 
     def bf_initialize(
             self, params: types.InitializeParams) -> types.InitializeResult:
         result = super().bf_initialize(params)
-
         global jediEnvironment
         global jediProject
+        global completionFunction
+        global documentSymbolFunction
         venv = getattr(params.initializationOptions, 'venv', None)
         if venv:
             jediEnvironment = create_environment(venv, False)
@@ -60,6 +68,27 @@ class AnakinLanguageServerProtocol(LanguageServerProtocol):
             logging.info(f'  {p}')
         logging.info(f'Jedi project path: {jediProject._path}')
 
+        def get_attr(o, *attrs):
+            try:
+                for attr in attrs:
+                    o = getattr(o, attr)
+                return o
+            except AttributeError:
+                return None
+
+        caps = getattr(params.capabilities, 'textDocument', None)
+
+        if get_attr(caps, 'completion', 'completionItem', 'snippetSupport'):
+            completionFunction = _completions_snippets
+        else:
+            completionFunction = _completions
+
+        if get_attr(caps,
+                    'documentSymbol', 'hierarchicalDocumentSymbolSupport'):
+            documentSymbolFunction = _document_symbol_hierarchy
+        else:
+            documentSymbolFunction = _document_symbol_plain
+
         result.capabilities.textDocumentSync = types.TextDocumentSyncOptions(
             open_close=True,
             change=types.TextDocumentSyncKind.INCREMENTAL,
@@ -69,11 +98,14 @@ class AnakinLanguageServerProtocol(LanguageServerProtocol):
 
 
 server = LanguageServer(protocol_cls=AnakinLanguageServerProtocol)
+
 scripts: Dict[str, Script] = {}
 pycodestyleOptions: Dict[str, Any] = {}
 mypyConfigs: Dict[str, str] = {}
+
 jediEnvironment = None
 jediProject = None
+
 config = {
     'pyflakes_errors': [
         'UndefinedName'
@@ -319,6 +351,71 @@ def did_change(ls: LanguageServer, params: types.DidChangeTextDocumentParams):
     get_script(ls, params.textDocument.uri, True)
 
 
+def _completion_sort_key(completion: Completion) -> str:
+    name = completion.name
+    if name.startswith('__'):
+        return f'zz{name}'
+    if name.startswith('_'):
+        return f'za{name}'
+    return f'aa{name}'
+
+
+def _completions(completions: List[Completion],
+                 r: types.Range) -> Iterator[types.CompletionItem]:
+    return (
+        types.CompletionItem(
+            text_edit=types.TextEdit(r, completion.complete),
+            label=completion.name,
+            kind=_COMPLETION_TYPES.get(completion.type,
+                                       types.CompletionItemKind.Text),
+            documentation=completion.docstring(raw=True),
+            sort_text=_completion_sort_key(completion)
+        ) for completion in completions
+    )
+
+
+def _completions_snippets(completions: List[Completion],
+                          r: types.Range) -> Iterator[types.CompletionItem]:
+    for completion in completions:
+        item = dict(
+            label=completion.name,
+            kind=_COMPLETION_TYPES.get(completion.type,
+                                       types.CompletionItemKind.Text),
+            documentation=completion.docstring(raw=True),
+            sort_text=_completion_sort_key(completion)
+        )
+        yield types.CompletionItem(
+            text_edit=types.TextEdit(r, completion.complete),
+            **item
+        )
+        for signature in completion.get_signatures():
+            names = []
+            snippets = []
+            for i, param in enumerate(signature.params):
+                if param.kind == Parameter.VAR_KEYWORD:
+                    break
+                if '=' in param.description:
+                    break
+                if param.name == '/':
+                    continue
+                names.append(param.name)
+                if param.kind == Parameter.KEYWORD_ONLY:
+                    snippet_prefix = f'{param.name}='
+                else:
+                    snippet_prefix = ''
+                snippets.append(
+                    f'{snippet_prefix}${{{i + 1}:{param.name}}}'
+                )
+            names_str = ', '.join(names)
+            snippets_str = ', '.join(snippets)
+            yield types.CompletionItem(**dict(
+                item,
+                label=f'{completion.name}({names_str})',
+                insert_text=f'{completion.name}({snippets_str})$0',
+                insert_text_format=types.InsertTextFormat.Snippet
+            ))
+
+
 @server.feature(COMPLETION, trigger_characters=['.'])
 def completions(ls: LanguageServer, params: types.CompletionParams):
     script = get_script(ls, params.textDocument.uri)
@@ -329,56 +426,8 @@ def completions(ls: LanguageServer, params: types.CompletionParams):
     position = types.Position(params.position.line,
                               params.position.character)
     r = types.Range(position, position)
-
-    def sort_key(completion):
-        name = completion.name
-        if name.startswith('__'):
-            return f'zz{name}'
-        if name.startswith('_'):
-            return f'za{name}'
-        return f'aa{name}'
-
-    def _completions():
-        for completion in completions:
-            item = dict(
-                label=completion.name,
-                kind=_COMPLETION_TYPES.get(completion.type,
-                                           types.CompletionItemKind.Text),
-                documentation=completion.docstring(raw=True),
-                sort_text=sort_key(completion)
-            )
-            yield types.CompletionItem(
-                text_edit=types.TextEdit(r, completion.complete),
-                **item
-            )
-            for signature in completion.get_signatures():
-                names = []
-                snippets = []
-                for i, param in enumerate(signature.params):
-                    if param.kind == Parameter.VAR_KEYWORD:
-                        break
-                    if '=' in param.description:
-                        break
-                    if param.name == '/':
-                        continue
-                    names.append(param.name)
-                    if param.kind == Parameter.KEYWORD_ONLY:
-                        snippet_prefix = f'{param.name}='
-                    else:
-                        snippet_prefix = ''
-                    snippets.append(
-                        f'{snippet_prefix}${{{i + 1}:{param.name}}}'
-                    )
-                names_str = ', '.join(names)
-                snippets_str = ', '.join(snippets)
-                yield types.CompletionItem(**dict(
-                    item,
-                    label=f'{completion.name}({names_str})',
-                    insert_text=f'{completion.name}({snippets_str})$0',
-                    insert_text_format=types.InsertTextFormat.Snippet
-                ))
-
-    return types.CompletionList(False, list(_completions()))
+    return types.CompletionList(False,
+                                list(completionFunction(completions, r)))
 
 
 @server.feature(HOVER)
@@ -492,7 +541,9 @@ _DOCUMENT_SYMBOL_KINDS = {
     'module': types.SymbolKind.Module,
     'class': types.SymbolKind.Class,
     'function': types.SymbolKind.Function,
-    'statement': types.SymbolKind.Variable
+    'statement': types.SymbolKind.Variable,
+    'instance': types.SymbolKind.Variable,
+    '_pseudotreenameclass': types.SymbolKind.Class
 }
 
 
@@ -500,7 +551,7 @@ def _get_document_symbols(
         code_lines: List[str],
         names: List[Name],
         current: Optional[Name] = None
-) -> Optional[List[types.DocumentSymbol]]:
+) -> List[types.DocumentSymbol]:
     # Looks like names are sorted by order of appearance, so
     # children are after their parents
     result = []
@@ -530,10 +581,50 @@ def _get_document_symbols(
     return result
 
 
+def _document_symbol_hierarchy(
+        uri: str, code_lines: List[str], names: List[Name]
+) -> List[types.DocumentSymbol]:
+    return _get_document_symbols(code_lines, names)
+
+
+def _document_symbol_plain(
+        uri: str, code_lines: List[str], names: List[Name]
+) -> List[types.SymbolInformation]:
+    def _symbols():
+        for name in names:
+            if name.type == 'param':
+                continue
+            parent = name.parent()
+            parent_name = parent and parent.full_name
+            if parent_name:
+                module_name = name.module_name
+                if parent_name == module_name:
+                    parent_name = None
+                elif parent_name.startswith(f'{module_name}.'):
+                    parent_name = parent_name[len(module_name) + 1:]
+            yield types.SymbolInformation(
+                name.name,
+                _DOCUMENT_SYMBOL_KINDS.get(name.type, types.SymbolKind.Null),
+                types.Location(uri, types.Range(
+                    types.Position(name.line - 1, name.column),
+                    types.Position(name.line - 1,
+                                   len(code_lines[name.line - 1]) - 1)
+                )),
+                parent_name
+            )
+    return list(_symbols())
+
+
 @server.feature(DOCUMENT_SYMBOL)
-def document_symbol(ls: LanguageServer, params: types.DocumentSymbolParams):
+def document_symbol(
+        ls: LanguageServer, params: types.DocumentSymbolParams
+) -> Union[List[types.DocumentSymbol], List[types.SymbolInformation], None]:
     script = get_script(ls, params.textDocument.uri)
-    result = _get_document_symbols(
+    names = script.get_names(all_scopes=True)
+    if not names:
+        return None
+    result = documentSymbolFunction(
+        params.textDocument.uri,
         script._code_lines,
         script.get_names(all_scopes=True)
     )
