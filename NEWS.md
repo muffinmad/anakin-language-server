@@ -1,5 +1,10 @@
 # NEWS
 
+## 1.4.1
+
+- `textEdit` in `completionItem` must replace to the end of word
+- Strip leading `'` from `completionItem` label
+
 ## 1.4
 
 - Implement `textDocument/documentSymbol`
