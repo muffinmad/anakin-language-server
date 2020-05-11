@@ -364,16 +364,25 @@ def _completion_sort_key(completion: Completion) -> str:
     return f'aa{name}'
 
 
+def _completion_item(completion: Completion, r: types.Range) -> Dict:
+    label = completion.name
+    if not completion.complete.startswith("'") and label.startswith("'"):
+        label = label[1:]
+    return dict(
+        label=label,
+        kind=_COMPLETION_TYPES.get(completion.type,
+                                   types.CompletionItemKind.Text),
+        documentation=completion.docstring(raw=True),
+        sort_text=_completion_sort_key(completion),
+        text_edit=types.TextEdit(r, completion.complete)
+    )
+
+
 def _completions(completions: List[Completion],
                  r: types.Range) -> Iterator[types.CompletionItem]:
     return (
         types.CompletionItem(
-            text_edit=types.TextEdit(r, completion.complete),
-            label=completion.name,
-            kind=_COMPLETION_TYPES.get(completion.type,
-                                       types.CompletionItemKind.Text),
-            documentation=completion.docstring(raw=True),
-            sort_text=_completion_sort_key(completion)
+            **_completion_item(completion, r)
         ) for completion in completions
     )
 
@@ -381,15 +390,8 @@ def _completions(completions: List[Completion],
 def _completions_snippets(completions: List[Completion],
                           r: types.Range) -> Iterator[types.CompletionItem]:
     for completion in completions:
-        item = dict(
-            label=completion.name,
-            kind=_COMPLETION_TYPES.get(completion.type,
-                                       types.CompletionItemKind.Text),
-            documentation=completion.docstring(raw=True),
-            sort_text=_completion_sort_key(completion)
-        )
+        item = _completion_item(completion, r)
         yield types.CompletionItem(
-            text_edit=types.TextEdit(r, completion.complete),
             **item
         )
         for signature in completion.get_signatures():
@@ -416,7 +418,8 @@ def _completions_snippets(completions: List[Completion],
                 item,
                 label=f'{completion.name}({names_str})',
                 insert_text=f'{completion.name}({snippets_str})$0',
-                insert_text_format=types.InsertTextFormat.Snippet
+                insert_text_format=types.InsertTextFormat.Snippet,
+                text_edit=None
             ))
 
 
@@ -427,7 +430,7 @@ def completions(ls: LanguageServer, params: types.CompletionParams):
         params.position.line + 1,
         params.position.character
     )
-    code_line = script._code_lines[params.position.line - 1]
+    code_line = script._code_lines[params.position.line]
     word_match = RE_WORD.match(code_line[params.position.character:])
     if word_match:
         word_rest = word_match.end()
