@@ -1,4 +1,5 @@
 import logging
+import re
 
 from inspect import Parameter
 from typing import List, Dict, Optional, Any, Iterator, Callable, Union
@@ -24,6 +25,9 @@ from pygls import types
 from pygls.server import LanguageServer
 from pygls.protocol import LanguageServerProtocol
 from pygls.uris import from_fs_path, to_fs_path
+
+
+RE_WORD = re.compile(r'\w*')
 
 
 _COMPLETION_TYPES = {
@@ -423,9 +427,18 @@ def completions(ls: LanguageServer, params: types.CompletionParams):
         params.position.line + 1,
         params.position.character
     )
-    position = types.Position(params.position.line,
-                              params.position.character)
-    r = types.Range(position, position)
+    code_line = script._code_lines[params.position.line - 1]
+    word_match = RE_WORD.match(code_line[params.position.character:])
+    if word_match:
+        word_rest = word_match.end()
+    else:
+        word_rest = 0
+    r = types.Range(
+        types.Position(params.position.line,
+                       params.position.character),
+        types.Position(params.position.line,
+                       params.position.character + word_rest)
+    )
     return types.CompletionList(False,
                                 list(completionFunction(completions, r)))
 
