@@ -6,7 +6,8 @@ from typing import List, Dict, Optional, Any, Iterator, Callable, Union
 
 from jedi import (Script, create_environment,  # type: ignore
                   get_default_environment,
-                  settings as jedi_settings, get_default_project)
+                  settings as jedi_settings, get_default_project,
+                  RefactoringError)
 from jedi.api.classes import Name, Completion  # type: ignore
 
 from pycodestyle import (BaseReport as CodestyleBaseReport,  # type: ignore
@@ -20,7 +21,7 @@ from pygls.features import (COMPLETION, TEXT_DOCUMENT_DID_CHANGE,
                             HOVER, SIGNATURE_HELP, DEFINITION,
                             REFERENCES, WORKSPACE_DID_CHANGE_CONFIGURATION,
                             TEXT_DOCUMENT_WILL_SAVE, TEXT_DOCUMENT_DID_SAVE,
-                            DOCUMENT_SYMBOL)
+                            DOCUMENT_SYMBOL, CODE_ACTION)
 from pygls import types
 from pygls.server import LanguageServer
 from pygls.protocol import LanguageServerProtocol
@@ -98,6 +99,10 @@ class AnakinLanguageServerProtocol(LanguageServerProtocol):
             change=types.TextDocumentSyncKind.INCREMENTAL,
             save=types.SaveOptions()
         )
+        result.capabilities.codeActionProvider = types.CodeActionOptions([
+            types.CodeActionKind.RefactorInline,
+            types.CodeActionKind.RefactorExtract
+        ])
         return result
 
 
@@ -645,3 +650,42 @@ def document_symbol(
         script.get_names(all_scopes=True)
     )
     return result
+
+
+@server.feature(CODE_ACTION)
+def code_action(
+        ls: LanguageServer, params: types.CodeActionParams
+) -> Optional[List[types.CodeAction]]:
+    if params.range.start != params.range.end:
+        # No selection actions
+        return None
+    script = get_script(ls, params.textDocument.uri)
+    try:
+        refactoring = script.inline(params.range.start.line + 1,
+                                    params.range.start.character)
+    except RefactoringError:
+        return None
+    changed_file = list(refactoring.get_changed_files().values())[0]
+    return [
+        types.CodeAction(
+            'Inline variable',
+            types.CodeActionKind.RefactorInline,
+            # TODO: use difflib instead of pasting whole document
+            edit=types.WorkspaceEdit(
+                document_changes=[
+                    types.TextDocumentEdit(
+                        types.VersionedTextDocumentIdentifier(
+                            params.textDocument.uri,
+                            ls.workspace.get_document(
+                                params.textDocument.uri).version
+                        ),
+                        [types.TextEdit(
+                            types.Range(
+                                types.Position(),
+                                types.Position(
+                                    len(script._code_lines) - 1,
+                                    len(script._code_lines[-1])
+                                )
+                            ),
+                            changed_file.get_new_code())])]))
+    ]
