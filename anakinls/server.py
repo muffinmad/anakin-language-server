@@ -30,6 +30,7 @@ from pygls.server import LanguageServer
 from pygls.protocol import LanguageServerProtocol
 from pygls.uris import from_fs_path, to_fs_path
 
+from .version import get_version
 
 RE_WORD = re.compile(r'\w*')
 
@@ -106,6 +107,11 @@ class AnakinLanguageServerProtocol(LanguageServerProtocol):
             types.CodeActionKind.RefactorInline,
             types.CodeActionKind.RefactorExtract
         ])
+        # pygls does not currently support serverInfo of LSP v3.15
+        result.serverInfo = {
+            'name': 'anakinls',
+            'version': get_version(),
+        }
         return result
 
 

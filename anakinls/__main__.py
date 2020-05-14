@@ -1,7 +1,9 @@
 import argparse
+import inspect
 import logging
 
 from .server import server
+from .version import get_version
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('pygls.protocol').setLevel(logging.WARN)
@@ -26,7 +28,21 @@ def main():
         help='Bind to this port'
     )
 
+    parser.add_argument(
+        '--version', action='store_true',
+        help='Print version and exit'
+    )
+
     args = parser.parse_args()
+
+    if args.version:
+        print(inspect.cleandoc(f'''anakinls v{get_version()}
+          Copyright (C) 2020 Andrii Kolomoiets
+          This is free software; see the source for copying conditions.
+          There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A
+          PARTICULAR PURPOSE.
+        '''))
+        return
 
     if args.tcp:
         server.start_tcp(args.host, args.port)
