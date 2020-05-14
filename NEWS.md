@@ -1,5 +1,9 @@
 # NEWS
 
+## 1.5
+
+- "Inline variable" code action
+
 ## 1.4.1
 
 - `textEdit` in `completionItem` must replace to the end of word

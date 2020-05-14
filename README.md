@@ -21,6 +21,7 @@ Yet another Jedi Python language server
 - `textDocument/references`
 - `textDocument/publishDiagnostics`
 - `textDocument/documentSymbol`
+- `textDocument/codeAction` ([Inline variable](https://jedi.readthedocs.io/en/latest/docs/api.html#jedi.Script.inline))
 
 ## Initialization option
 

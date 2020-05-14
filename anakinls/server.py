@@ -1,6 +1,7 @@
 import logging
 import re
 
+from difflib import Differ
 from inspect import Parameter
 from typing import List, Dict, Optional, Any, Iterator, Callable, Union
 
@@ -9,6 +10,8 @@ from jedi import (Script, create_environment,  # type: ignore
                   settings as jedi_settings, get_default_project,
                   RefactoringError)
 from jedi.api.classes import Name, Completion  # type: ignore
+from jedi.api.refactoring import Refactoring, ChangedFile  # type: ignore
+from parso import split_lines  # type: ignore
 
 from pycodestyle import (BaseReport as CodestyleBaseReport,  # type: ignore
                          Checker as CodestyleChecker,
@@ -123,6 +126,8 @@ config = {
     'help_on_hover': True,
     'mypy_enabled': False
 }
+
+differ = Differ()
 
 
 def get_script(ls: LanguageServer, uri: str, update: bool = False) -> Script:
@@ -652,6 +657,71 @@ def document_symbol(
     return result
 
 
+def _get_text_edits(changes: ChangedFile) -> List[types.TextEdit]:
+    result = []
+    old_lines = split_lines(changes._module_node.get_code(), keepends=True)
+    new_lines = split_lines(changes.get_new_code(), keepends=True)
+    line_number = 0
+    start = None
+    replace_lines = False
+    lines: List[str] = []
+
+    def _append():
+        if replace_lines:
+            end = types.Position(line_number)
+        else:
+            end = start
+        result.append(
+            types.TextEdit(
+                types.Range(start, end),
+                ''.join(lines)
+            )
+        )
+
+    for line in differ.compare(old_lines, new_lines):
+        kind = line[0]
+        if kind == '?':
+            continue
+        if kind == '-':
+            if not start:
+                start = types.Position(line_number)
+            replace_lines = True
+            line_number += 1
+            continue
+        if kind == '+':
+            if not start:
+                start = types.Position(line_number)
+            lines.append(line[2:])
+            continue
+        if start:
+            _append()
+            start = None
+            replace_lines = False
+            lines = []
+        line_number += 1
+    if start:
+        _append()
+    return result
+
+
+def _get_document_changes(
+        ls: LanguageServer, refactoring: Refactoring
+) -> List[types.TextDocumentEdit]:
+    result = []
+    for fn, changes in refactoring.get_changed_files().items():
+        text_edits = _get_text_edits(changes)
+        if text_edits:
+            uri = from_fs_path(fn)
+            result.append(types.TextDocumentEdit(
+                types.VersionedTextDocumentIdentifier(
+                    uri,
+                    ls.workspace.get_document(uri).version
+                ),
+                text_edits
+            ))
+    return result
+
+
 @server.feature(CODE_ACTION)
 def code_action(
         ls: LanguageServer, params: types.CodeActionParams
@@ -665,27 +735,10 @@ def code_action(
                                     params.range.start.character)
     except RefactoringError:
         return None
-    changed_file = list(refactoring.get_changed_files().values())[0]
-    return [
-        types.CodeAction(
+    document_changes = _get_document_changes(ls, refactoring)
+    if document_changes:
+        return [types.CodeAction(
             'Inline variable',
             types.CodeActionKind.RefactorInline,
-            # TODO: use difflib instead of pasting whole document
-            edit=types.WorkspaceEdit(
-                document_changes=[
-                    types.TextDocumentEdit(
-                        types.VersionedTextDocumentIdentifier(
-                            params.textDocument.uri,
-                            ls.workspace.get_document(
-                                params.textDocument.uri).version
-                        ),
-                        [types.TextEdit(
-                            types.Range(
-                                types.Position(),
-                                types.Position(
-                                    len(script._code_lines) - 1,
-                                    len(script._code_lines[-1])
-                                )
-                            ),
-                            changed_file.get_new_code())])]))
-    ]
+            edit=types.WorkspaceEdit(document_changes=document_changes))]
+    return None
