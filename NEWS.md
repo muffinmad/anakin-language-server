@@ -1,5 +1,9 @@
 # NEWS
 
+## 1.5.1
+
+- Hover info in markdown format
+
 ## 1.5
 
 - "Inline variable" code action

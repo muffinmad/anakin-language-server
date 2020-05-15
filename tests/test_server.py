@@ -59,6 +59,7 @@ def foo(a, *, b, c=None):
 foo'''
     doc = Document(uri, content)
     server.workspace.get_document = Mock(return_value=doc)
+    aserver.hoverFunction = aserver._docstring
     h = aserver.hover(server, types.TextDocumentPositionParams(
         doc,
         types.Position(5, 0)))

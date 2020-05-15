@@ -54,6 +54,9 @@ documentSymbolFunction: Union[
     Callable[[str, List[str], List[Name]], List[types.DocumentSymbol]],
     Callable[[str, List[str], List[Name]], List[types.SymbolInformation]]]
 
+hoverMarkup: types.MarkupKind = types.MarkupKind.PlainText
+hoverFunction: Callable[[Name], str]
+
 
 class AnakinLanguageServerProtocol(LanguageServerProtocol):
 
@@ -64,6 +67,8 @@ class AnakinLanguageServerProtocol(LanguageServerProtocol):
         global jediProject
         global completionFunction
         global documentSymbolFunction
+        global hoverMarkup
+        global hoverFunction
         venv = getattr(params.initializationOptions, 'venv', None)
         if venv:
             jediEnvironment = create_environment(venv, False)
@@ -96,6 +101,14 @@ class AnakinLanguageServerProtocol(LanguageServerProtocol):
             documentSymbolFunction = _document_symbol_hierarchy
         else:
             documentSymbolFunction = _document_symbol_plain
+
+        hover = get_attr(caps, 'hover', 'contentFormat')
+        if hover:
+            hoverMarkup = hover[0]
+        if hoverMarkup == types.MarkupKind.Markdown:
+            hoverFunction = _docstring_markdown
+        else:
+            hoverFunction = _docstring
 
         result.capabilities.textDocumentSync = types.TextDocumentSyncOptions(
             open_close=True,
@@ -456,16 +469,37 @@ def completions(ls: LanguageServer, params: types.CompletionParams):
                                 list(completionFunction(completions, r)))
 
 
+def _docstring(name: Name) -> str:
+    return name.docstring()
+
+
+def _docstring_markdown(name: Name) -> str:
+    doc = name.docstring()
+    if not doc:
+        return ''
+    if name.type in ['class', 'function']:
+        try:
+            sig, doc = doc.split('\n\n', 1)
+        except ValueError:
+            sig = doc
+            doc = False
+        sig = f'```python\n{sig}\n```'
+        if doc:
+            return f'{sig}\n\n```\n{doc}\n```'
+        return sig
+    return f'```\n{doc}\n```'
+
+
 @server.feature(HOVER)
 def hover(ls: LanguageServer,
           params: types.TextDocumentPositionParams) -> Optional[types.Hover]:
     script = get_script(ls, params.textDocument.uri)
     fn = script.help if config['help_on_hover'] else script.infer
     names = fn(params.position.line + 1, params.position.character)
-    result = '\n----------\n'.join(x.docstring() for x in names)
+    result = '\n\n'.join(map(hoverFunction, names))
     if result:
         return types.Hover(
-            types.MarkupContent(types.MarkupKind.PlainText, result)
+            types.MarkupContent(hoverMarkup, result)
         )
     return None
 
