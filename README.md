@@ -70,6 +70,10 @@ Available options:
 
   Default: `None`.
 
+- `completion_snippet_first` - Tweak `sortText` property so snippet completion appear before plain completion.
+
+  Default: `False`.
+
 ## Configuration example
 
 Here is [eglot](https://github.com/joaotavora/eglot) configuration:

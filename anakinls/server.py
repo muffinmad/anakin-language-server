@@ -131,13 +131,19 @@ mypyConfigs: Dict[str, str] = {}
 jediEnvironment = None
 jediProject = None
 
+completionPrefixPlain = 'a'
+completionPrefixSnippet = 'z'
+
+jediHoverFunction = Script.help
+
 config = {
     'pyflakes_errors': [
         'UndefinedName'
     ],
     'pycodestyle_config': None,
     'help_on_hover': True,
-    'mypy_enabled': False
+    'mypy_enabled': False,
+    'completion_snippet_first': False
 }
 
 differ = Differ()
@@ -378,13 +384,13 @@ def did_change(ls: LanguageServer, params: types.DidChangeTextDocumentParams):
     get_script(ls, params.textDocument.uri, True)
 
 
-def _completion_sort_key(completion: Completion) -> str:
+def _completion_sort_key(completion: Completion, prefix: str = '') -> str:
     name = completion.name
     if name.startswith('__'):
-        return f'zz{name}'
+        return f'zz{prefix}{name}'
     if name.startswith('_'):
-        return f'za{name}'
-    return f'aa{name}'
+        return f'za{prefix}{name}'
+    return f'aa{prefix}{name}'
 
 
 def _completion_item(completion: Completion, r: types.Range) -> Dict:
@@ -396,7 +402,6 @@ def _completion_item(completion: Completion, r: types.Range) -> Dict:
         kind=_COMPLETION_TYPES.get(completion.type,
                                    types.CompletionItemKind.Text),
         documentation=completion.docstring(raw=True),
-        sort_text=_completion_sort_key(completion),
         text_edit=types.TextEdit(r, completion.complete)
     )
 
@@ -405,7 +410,8 @@ def _completions(completions: List[Completion],
                  r: types.Range) -> Iterator[types.CompletionItem]:
     return (
         types.CompletionItem(
-            **_completion_item(completion, r)
+            sort_text=_completion_sort_key(completion),
+            **_completion_item(completion, r),
         ) for completion in completions
     )
 
@@ -415,6 +421,7 @@ def _completions_snippets(completions: List[Completion],
     for completion in completions:
         item = _completion_item(completion, r)
         yield types.CompletionItem(
+            sort_text=_completion_sort_key(completion, completionPrefixPlain),
             **item
         )
         for signature in completion.get_signatures():
@@ -439,6 +446,8 @@ def _completions_snippets(completions: List[Completion],
             snippets_str = ', '.join(snippets)
             yield types.CompletionItem(**dict(
                 item,
+                sort_text=_completion_sort_key(completion,
+                                               completionPrefixSnippet),
                 label=f'{completion.name}({names_str})',
                 insert_text=f'{completion.name}({snippets_str})$0',
                 insert_text_format=types.InsertTextFormat.Snippet,
@@ -494,8 +503,9 @@ def _docstring_markdown(name: Name) -> str:
 def hover(ls: LanguageServer,
           params: types.TextDocumentPositionParams) -> Optional[types.Hover]:
     script = get_script(ls, params.textDocument.uri)
-    fn = script.help if config['help_on_hover'] else script.infer
-    names = fn(params.position.line + 1, params.position.character)
+    names = jediHoverFunction(script,
+                              params.position.line + 1,
+                              params.position.character)
     result = '\n\n'.join(map(hoverFunction, names))
     if result:
         return types.Hover(
@@ -575,8 +585,23 @@ def did_change_configuration(ls: LanguageServer,
     changed = set()
     for k in config:
         if hasattr(settings.settings.anakinls, k):
-            config[k] = getattr(settings.settings.anakinls, k)
-            if k != 'help_on_hover':
+            config[k] = v = getattr(settings.settings.anakinls, k)
+            if k == 'help_on_hover':
+                global jediHoverFunction
+                if v:
+                    jediHoverFunction = Script.help
+                else:
+                    jediHoverFunction = Script.infer
+            elif k == 'completion_snippet_first':
+                global completionPrefixPlain
+                global completionPrefixSnippet
+                if v:
+                    completionPrefixPlain = 'z'
+                    completionPrefixSnippet = 'a'
+                else:
+                    completionPrefixPlain = 'a'
+                    completionPrefixSnippet = 'z'
+            else:
                 changed.add(k)
     if 'pycodestyle_config' in changed:
         pycodestyleOptions.clear()

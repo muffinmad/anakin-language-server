@@ -41,10 +41,11 @@ foo'''
     item = completion.items[0]
     assert item.insertText is None
     assert item.label == 'foo'
-    assert item.sortText == 'aafoo'
+    assert item.sortText == 'aaafoo'
     assert item.insertTextFormat is None
     item = completion.items[1]
     assert item.label == 'foo(a, b)'
+    assert item.sortText == 'aazfoo'
     assert item.insertTextFormat == types.InsertTextFormat.Snippet
     assert item.insertText == 'foo(${1:a}, b=${2:b})$0'
 
