@@ -1,5 +1,11 @@
 # NEWS
 
+## 1.5.2
+
+- Make Jedi's `statement` have `Variable` type in the completion (#14)
+- Add serverInfo and --version CLI arg (#8)
+- Possibility to place snippet completion before plain one (#10)
+
 ## 1.5.1
 
 - Hover info in markdown format
