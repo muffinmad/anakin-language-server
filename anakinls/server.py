@@ -42,7 +42,7 @@ _COMPLETION_TYPES = {
     'function': types.CompletionItemKind.Function,
     'param': types.CompletionItemKind.Variable,
     'keyword': types.CompletionItemKind.Keyword,
-    'statement': types.CompletionItemKind.Keyword
+    'statement': types.CompletionItemKind.Variable
 }
 
 
