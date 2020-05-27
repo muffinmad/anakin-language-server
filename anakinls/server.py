@@ -27,7 +27,7 @@ from pygls.features import (COMPLETION, TEXT_DOCUMENT_DID_CHANGE,
                             REFERENCES, WORKSPACE_DID_CHANGE_CONFIGURATION,
                             TEXT_DOCUMENT_WILL_SAVE, TEXT_DOCUMENT_DID_SAVE,
                             DOCUMENT_SYMBOL, CODE_ACTION, FORMATTING,
-                            RANGE_FORMATTING)
+                            RANGE_FORMATTING, RENAME)
 from pygls import types
 from pygls.server import LanguageServer
 from pygls.protocol import LanguageServerProtocol
@@ -836,3 +836,19 @@ def range_formatting(
         ls: LanguageServer, params: types.DocumentRangeFormattingParams
 ) -> Optional[List[types.TextEdit]]:
     return _formatting(ls, params.textDocument.uri, params.range)
+
+
+@server.feature(RENAME)
+def rename(ls: LanguageServer,
+           params: types.RenameParams) -> Optional[types.WorkspaceEdit]:
+    script = get_script(ls, params.textDocument.uri)
+    try:
+        refactoring = script.rename(params.position.line + 1,
+                                    params.position.character,
+                                    new_name=params.newName)
+    except RefactoringError:
+        return None
+    document_changes = _get_document_changes(ls, refactoring)
+    if document_changes:
+        return types.WorkspaceEdit(document_changes=document_changes)
+    return None

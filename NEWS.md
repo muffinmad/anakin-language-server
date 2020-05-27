@@ -1,5 +1,9 @@
 # NEWS
 
+## 1.7
+
+- Implement `textDocument/rename`
+
 ## 1.6
 
 - Implement `textDocument/formatting` and `textDocument/rangeFormatting` using `yapf` (#12)

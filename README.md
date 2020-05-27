@@ -25,6 +25,7 @@ Yet another Jedi Python language server
 - `textDocument/codeAction` ([Inline variable](https://jedi.readthedocs.io/en/latest/docs/api.html#jedi.Script.inline))
 - `textDocument/formatting`
 - `textDocument/rangeFormatting`
+- `textDocument/rename`
 
 ## Initialization option
 
