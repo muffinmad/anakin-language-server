@@ -10,7 +10,7 @@ from jedi import (Script, create_environment,  # type: ignore
                   settings as jedi_settings, get_default_project,
                   RefactoringError)
 from jedi.api.classes import Name, Completion  # type: ignore
-from jedi.api.refactoring import Refactoring, ChangedFile  # type: ignore
+from jedi.api.refactoring import Refactoring  # type: ignore
 from parso import split_lines  # type: ignore
 
 from pycodestyle import (BaseReport as CodestyleBaseReport,  # type: ignore
@@ -19,12 +19,15 @@ from pycodestyle import (BaseReport as CodestyleBaseReport,  # type: ignore
 
 from pyflakes.api import check as pyflakes_check  # type: ignore
 
+from yapf.yapflib.yapf_api import FormatCode  # type: ignore
+
 from pygls.features import (COMPLETION, TEXT_DOCUMENT_DID_CHANGE,
                             TEXT_DOCUMENT_DID_CLOSE, TEXT_DOCUMENT_DID_OPEN,
                             HOVER, SIGNATURE_HELP, DEFINITION,
                             REFERENCES, WORKSPACE_DID_CHANGE_CONFIGURATION,
                             TEXT_DOCUMENT_WILL_SAVE, TEXT_DOCUMENT_DID_SAVE,
-                            DOCUMENT_SYMBOL, CODE_ACTION)
+                            DOCUMENT_SYMBOL, CODE_ACTION, FORMATTING,
+                            RANGE_FORMATTING)
 from pygls import types
 from pygls.server import LanguageServer
 from pygls.protocol import LanguageServerProtocol
@@ -149,7 +152,8 @@ config = {
     'pycodestyle_config': None,
     'help_on_hover': True,
     'mypy_enabled': False,
-    'completion_snippet_first': False
+    'completion_snippet_first': False,
+    'yapf_style_config': 'pep8'
 }
 
 differ = Differ()
@@ -722,10 +726,10 @@ def document_symbol(
     return result
 
 
-def _get_text_edits(changes: ChangedFile) -> List[types.TextEdit]:
+def _get_text_edits(old: str, new: str) -> List[types.TextEdit]:
     result = []
-    old_lines = split_lines(changes._module_node.get_code(), keepends=True)
-    new_lines = split_lines(changes.get_new_code(), keepends=True)
+    old_lines = split_lines(old, keepends=True)
+    new_lines = split_lines(new, keepends=True)
     line_number = 0
     start = None
     replace_lines = False
@@ -774,7 +778,8 @@ def _get_document_changes(
 ) -> List[types.TextDocumentEdit]:
     result = []
     for fn, changes in refactoring.get_changed_files().items():
-        text_edits = _get_text_edits(changes)
+        text_edits = _get_text_edits(changes._module_node.get_code(),
+                                     changes.get_new_code())
         if text_edits:
             uri = from_fs_path(fn)
             result.append(types.TextDocumentEdit(
@@ -807,3 +812,27 @@ def code_action(
             types.CodeActionKind.RefactorInline,
             edit=types.WorkspaceEdit(document_changes=document_changes))]
     return None
+
+
+def _formatting(
+        ls: LanguageServer, uri: str, range_: types.Range = None
+) -> Optional[List[types.TextEdit]]:
+    old = get_script(ls, uri)._code
+    lines = [(range_.start.line + 1, range_.end.line + 1)] if range_ else None
+    new, changed = FormatCode(old, style_config=config['yapf_style_config'],
+                              lines=lines)
+    return _get_text_edits(old, new) if changed else None
+
+
+@server.feature(FORMATTING)
+def formatting(
+        ls: LanguageServer, params: types.DocumentFormattingParams
+) -> Optional[List[types.TextEdit]]:
+    return _formatting(ls, params.textDocument.uri)
+
+
+@server.feature(RANGE_FORMATTING)
+def range_formatting(
+        ls: LanguageServer, params: types.DocumentRangeFormattingParams
+) -> Optional[List[types.TextEdit]]:
+    return _formatting(ls, params.textDocument.uri, params.range)

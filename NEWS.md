@@ -1,5 +1,9 @@
 # NEWS
 
+## 1.6
+
+- Implement `textDocument/formatting` and `textDocument/rangeFormatting` using `yapf` (#12)
+
 ## 1.5.2
 
 - Make Jedi's `statement` have `Variable` type in the completion (#14)

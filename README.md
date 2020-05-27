@@ -8,6 +8,7 @@ Yet another Jedi Python language server
 - Jedi ~= 0.17
 - pyflakes ~= 2.2
 - pycodestyle ~= 2.5
+- yapf ~=0.30
 
 ## Optional requirements
 - mypy
@@ -22,6 +23,8 @@ Yet another Jedi Python language server
 - `textDocument/publishDiagnostics`
 - `textDocument/documentSymbol`
 - `textDocument/codeAction` ([Inline variable](https://jedi.readthedocs.io/en/latest/docs/api.html#jedi.Script.inline))
+- `textDocument/formatting`
+- `textDocument/rangeFormatting`
 
 ## Initialization option
 
@@ -73,6 +76,10 @@ Available options:
 - `completion_snippet_first` - Tweak `sortText` property so snippet completion appear before plain completion.
 
   Default: `False`.
+
+- `yapf_style_config` - Either a style name or a path to a file that contains formatting style settings.
+
+  Default: `'pep8'`
 
 ## Configuration example
 
