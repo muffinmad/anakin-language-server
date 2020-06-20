@@ -1,5 +1,10 @@
 # NEWS
 
+## 1.8
+
+- Implement `textDocument/documentHighlight`
+- Invalid syntax error message
+
 ## 1.7
 
 - Implement `textDocument/rename`
