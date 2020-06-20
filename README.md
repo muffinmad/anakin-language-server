@@ -5,7 +5,7 @@ Yet another Jedi Python language server
 
 - Python >= 3.6
 - pygls ~= 0.9
-- Jedi ~= 0.17
+- Jedi >= 0.17.1
 - pyflakes ~= 2.2
 - pycodestyle ~= 2.5
 - yapf ~=0.30
@@ -26,6 +26,7 @@ Yet another Jedi Python language server
 - `textDocument/formatting`
 - `textDocument/rangeFormatting`
 - `textDocument/rename`
+- `textDocument/documentHighlight`
 
 ## Initialization option
 

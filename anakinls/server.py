@@ -27,7 +27,7 @@ from pygls.features import (COMPLETION, TEXT_DOCUMENT_DID_CHANGE,
                             REFERENCES, WORKSPACE_DID_CHANGE_CONFIGURATION,
                             TEXT_DOCUMENT_WILL_SAVE, TEXT_DOCUMENT_DID_SAVE,
                             DOCUMENT_SYMBOL, CODE_ACTION, FORMATTING,
-                            RANGE_FORMATTING, RENAME)
+                            RANGE_FORMATTING, RENAME, DOCUMENT_HIGHLIGHT)
 from pygls import types
 from pygls.server import LanguageServer
 from pygls.protocol import LanguageServerProtocol
@@ -556,14 +556,18 @@ def signature_help(
     return None
 
 
+def _get_name_range(name: Name) -> types.Range:
+    return types.Range(
+        types.Position(name.line - 1, name.column),
+        types.Position(name.line - 1, name.column + len(name.name))
+    )
+
+
 def _get_locations(defs: List[Name]) -> List[types.Location]:
     return [
         types.Location(
             from_fs_path(d.module_path),
-            types.Range(
-                types.Position(d.line - 1, d.column),
-                types.Position(d.line - 1, d.column + len(d.name))
-            )
+            _get_name_range(d)
         )
         for d in defs if d.module_path
     ]
@@ -852,3 +856,21 @@ def rename(ls: LanguageServer,
     if document_changes:
         return types.WorkspaceEdit(document_changes=document_changes)
     return None
+
+
+@server.feature(DOCUMENT_HIGHLIGHT)
+def highlight(
+        ls: LanguageServer, params: types.TextDocumentPositionParams
+) -> Optional[List[types.DocumentHighlight]]:
+    script = get_script(ls, params.textDocument.uri)
+    names = script.get_references(params.position.line + 1,
+                                  params.position.character,
+                                  scope='file')
+    if not names:
+        return None
+    return [
+        types.DocumentHighlight(
+            _get_name_range(name)
+        )
+        for name in names
+    ]
