@@ -345,7 +345,7 @@ def _validate(ls: LanguageServer, uri: str):
                 types.Position(x.line - 1, x.column),
                 types.Position(x.until_line - 1, x.until_column)
             ),
-            'Invalid syntax',
+            x.get_message(),
             types.DiagnosticSeverity.Error,
             source='jedi'
         )
