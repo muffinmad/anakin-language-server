@@ -17,7 +17,7 @@ setup(
     packages=['anakinls'],
     python_requires='>=3.6',
     install_requires=[
-        'jedi~=0.17',
+        'jedi>=0.17.1',
         'pygls~=0.9',
         'pyflakes~=2.2',
         'pycodestyle~=2.5',
