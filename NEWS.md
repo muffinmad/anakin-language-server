@@ -1,5 +1,9 @@
 # NEWS
 
+## 1.8.1
+
+- Bind Jedi's completion type `property` to `CompletionItemKind.Property`
+
 ## 1.8
 
 - Implement `textDocument/documentHighlight`

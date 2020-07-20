@@ -60,7 +60,8 @@ _COMPLETION_TYPES = {
     'function': types.CompletionItemKind.Function,
     'param': types.CompletionItemKind.Variable,
     'keyword': types.CompletionItemKind.Keyword,
-    'statement': types.CompletionItemKind.Variable
+    'statement': types.CompletionItemKind.Variable,
+    'property': types.CompletionItemKind.Property
 }
 
 
@@ -449,6 +450,8 @@ def _completions_snippets(completions: List[Completion],
             sort_text=_completion_sort_key(completion, completionPrefixPlain),
             **item
         )
+        if completion.type == 'property':
+            continue
         for signature in completion.get_signatures():
             names = []
             snippets = []
