@@ -277,10 +277,10 @@ def get_pycodestyle_options(ls: LanguageServer, uri: str):
     folder = _get_workspace_folder_path(ls, uri)
     result = pycodestyleOptions.get(folder)
     if not result:
-        result = CodestyleStyleGuide(
-            paths=[folder],
-            config_file=config['pycodestyle_config']
-        ).options
+        kwargs = {'config_file': config['pycodestyle_config']}
+        if folder:
+            kwargs['paths'] = [folder]
+        result = CodestyleStyleGuide(**kwargs).options
         pycodestyleOptions[folder] = result
     return result
 
