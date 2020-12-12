@@ -26,11 +26,12 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        python -m pip install flake8 pytest
+        python -m pip install pytest
         pip install -r requirements.txt
-    - name: Lint with flake8
+    - name: Lint with pycodestyle and pyflakes
       run: |
-        flake8 .
+        pycodestyle .
+        pyflakes .
     - name: Test with pytest
       run: |
         pytest
