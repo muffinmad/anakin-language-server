@@ -1,5 +1,10 @@
 # NEWS
 
+## 1.10
+
+- Publish diagnostics on document change
+- Options to control diagnoatics publishing
+
 ## 1.9
 
 - Fuzzy completions

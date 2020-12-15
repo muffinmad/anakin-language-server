@@ -65,6 +65,9 @@ Available options:
 |`help_on_hover`|Use [`help`](https://jedi.readthedocs.io/en/latest/docs/api.html#jedi.Script.help) instead of [`infer`](https://jedi.readthedocs.io/en/latest/docs/api.html#jedi.Script.infer) for `textDocument/hover`.|`True`|
 |`completion_snippet_first`|Tweak `sortText` property so snippet completion appear before plain completion.|`False`|
 |`completion_fuzzy`|Value of the `fuzzy` parameter for [`complete`](https://jedi.readthedocs.io/en/latest/docs/api.html#jedi.Script.complete).|`False`|
+|`diagnostic_on_open`|Publish diagnostics on `textDocument/didOpen`|`True`|
+|`diagnostic_on_change`|Publish diagnostics on `textDocument/didChange`|`False`|
+|`diagnostic_on_save`|Publish diagnostics on `textDocument/didSave`|`True`|
 |`pyflakes_errors`|Diagnostic severity will be set to `Error` if Pyflakes message class name is in this list. See [Pyflakes messages](https://github.com/PyCQA/pyflakes/blob/master/pyflakes/messages.py).|`['UndefinedName']`|
 |`pycodestyle_config`|In addition to project and user level config, specify pycodestyle config file. Same as `--config` option for `pycodestyle`.|`None`|
 |`mypy_enabled`|Use [`mypy`](https://mypy.readthedocs.io/en/stable/index.html) to provide diagnostics.|`False`|

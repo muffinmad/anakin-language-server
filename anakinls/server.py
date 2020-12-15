@@ -48,7 +48,7 @@ from pygls.server import LanguageServer
 from pygls.protocol import LanguageServerProtocol
 from pygls.uris import from_fs_path, to_fs_path
 
-from .version import get_version
+from .version import get_version  # type: ignore
 
 RE_WORD = re.compile(r'\w*')
 
@@ -170,6 +170,9 @@ config = {
     'mypy_enabled': False,
     'completion_snippet_first': False,
     'completion_fuzzy': False,
+    'diagnostic_on_open': True,
+    'diagnostic_on_save': True,
+    'diagnostic_on_change': False,
     'yapf_style_config': 'pep8'
 }
 
@@ -309,7 +312,10 @@ def _mypy_check(ls: LanguageServer, uri: str, script: Script,
     from mypy import api
     assert jediEnvironment is not None
     version_info = jediEnvironment.version_info
-    filename = to_fs_path(uri)
+    if config['diagnostic_on_change']:
+        args = ['--command', script._code]
+    else:
+        args = [to_fs_path(uri)]
     lines = api.run([
         '--python-executable', jediEnvironment.executable,
         '--python-version', f'{version_info.major}.{version_info.minor}',
@@ -318,10 +324,8 @@ def _mypy_check(ls: LanguageServer, uri: str, script: Script,
         '--show-column-numbers',
         '--show-error-codes',
         '--no-pretty',
-        '--show-absolute-path',
-        '--no-error-summary',
-        filename
-    ])
+        '--no-error-summary'
+    ] + args)
     if lines[1]:
         ls.show_message(lines[1], types.MessageType.Error)
         return
@@ -330,9 +334,7 @@ def _mypy_check(ls: LanguageServer, uri: str, script: Script,
         parts = line.split(':', 4)
         if len(parts) < 5:
             continue
-        fn, row, column, err_type, message = parts
-        if fn != filename:
-            continue
+        _fn, row, column, err_type, message = parts
         row = int(row) - 1
         column = int(column) - 1
         if err_type.strip() == 'note':
@@ -353,9 +355,11 @@ def _mypy_check(ls: LanguageServer, uri: str, script: Script,
     return result
 
 
-def _validate(ls: LanguageServer, uri: str):
+def _validate(ls: LanguageServer, uri: str, script: Script = None):
+    if script is None:
+        script = get_script(ls, uri)
+
     # Jedi
-    script = get_script(ls, uri)
     result = [
         types.Diagnostic(
             types.Range(
@@ -383,6 +387,7 @@ def _validate(ls: LanguageServer, uri: str):
         CodestyleReport(codestyleopts, result)
     ).check_all()
 
+    # mypy
     if config['mypy_enabled']:
         try:
             _mypy_check(ls, uri, script, result)
@@ -395,7 +400,8 @@ def _validate(ls: LanguageServer, uri: str):
 
 @server.feature(TEXT_DOCUMENT_DID_OPEN)
 def did_open(ls: LanguageServer, params: types.DidOpenTextDocumentParams):
-    _validate(ls, params.textDocument.uri)
+    if config['diagnostic_on_open']:
+        _validate(ls, params.textDocument.uri)
 
 
 @server.feature(TEXT_DOCUMENT_DID_CLOSE)
@@ -408,7 +414,9 @@ def did_close(ls: LanguageServer, params: types.DidCloseTextDocumentParams):
 
 @server.feature(TEXT_DOCUMENT_DID_CHANGE)
 def did_change(ls: LanguageServer, params: types.DidChangeTextDocumentParams):
-    get_script(ls, params.textDocument.uri, True)
+    script = get_script(ls, params.textDocument.uri, True)
+    if config['diagnostic_on_change']:
+        _validate(ls, params.textDocument.uri, script)
 
 
 def _completion_sort_key(completion: Completion, prefix: str = '') -> str:
@@ -647,7 +655,7 @@ def did_change_configuration(ls: LanguageServer,
         pycodestyleOptions.clear()
     if 'mypy_enabled' in changed:
         mypyConfigs.clear()
-    if changed:
+    if changed and config['diagnostic_on_open']:
         for uri in ls.workspace.documents:
             _validate(ls, uri)
 
@@ -659,7 +667,8 @@ def will_save(ls: LanguageServer, params: types.WillSaveTextDocumentParams):
 
 @server.feature(TEXT_DOCUMENT_DID_SAVE)
 def did_save(ls: LanguageServer, params: types.DidSaveTextDocumentParams):
-    _validate(ls, params.textDocument.uri)
+    if config['diagnostic_on_save']:
+        _validate(ls, params.textDocument.uri)
 
 
 _DOCUMENT_SYMBOL_KINDS = {
