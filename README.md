@@ -59,29 +59,16 @@ Diagnostics providers:
 Configuration options must be passed under `anakinls` key in `workspace/didChangeConfiguration` notification.
 
 Available options:
-- `pyflakes_errors` - Diagnostic severity will be set to `Error` if Pyflakes message class name is in this list. See [Pyflakes messages](https://github.com/PyCQA/pyflakes/blob/master/pyflakes/messages.py).
 
-  Default: `['UndefinedName']`.
-
-- `help_on_hover` - Use [`help`](https://jedi.readthedocs.io/en/latest/docs/api.html#jedi.Script.help) instead of [`infer`](https://jedi.readthedocs.io/en/latest/docs/api.html#jedi.Script.infer) for `textDocument/hover`.
-
-  Default: `True`.
-
-- `mypy_enabled` - Use [`mypy`](https://mypy.readthedocs.io/en/stable/index.html) to provide diagnostics.
-
-  Default: `False`.
-
-- `pycodestyle_config` - In addition to project and user level config, specify pycodestyle config file. Same as `--config` option for `pycodestyle`.
-
-  Default: `None`.
-
-- `completion_snippet_first` - Tweak `sortText` property so snippet completion appear before plain completion.
-
-  Default: `False`.
-
-- `yapf_style_config` - Either a style name or a path to a file that contains formatting style settings.
-
-  Default: `'pep8'`
+|Option|Description|Default|
+|-|-|-|
+|`help_on_hover`|Use [`help`](https://jedi.readthedocs.io/en/latest/docs/api.html#jedi.Script.help) instead of [`infer`](https://jedi.readthedocs.io/en/latest/docs/api.html#jedi.Script.infer) for `textDocument/hover`.|`True`|
+|`completion_snippet_first`|Tweak `sortText` property so snippet completion appear before plain completion.|`False`|
+|`completion_fuzzy`|Value of the `fuzzy` parameter for [`complete`](https://jedi.readthedocs.io/en/latest/docs/api.html#jedi.Script.complete).|`False`|
+|`pyflakes_errors`|Diagnostic severity will be set to `Error` if Pyflakes message class name is in this list. See [Pyflakes messages](https://github.com/PyCQA/pyflakes/blob/master/pyflakes/messages.py).|`['UndefinedName']`|
+|`pycodestyle_config`|In addition to project and user level config, specify pycodestyle config file. Same as `--config` option for `pycodestyle`.|`None`|
+|`mypy_enabled`|Use [`mypy`](https://mypy.readthedocs.io/en/stable/index.html) to provide diagnostics.|`False`|
+|`yapf_style_config`|Either a style name or a path to a file that contains formatting style settings.|`'pep8'`|
 
 ## Configuration example
 

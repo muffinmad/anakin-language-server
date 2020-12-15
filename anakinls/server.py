@@ -169,6 +169,7 @@ config = {
     'help_on_hover': True,
     'mypy_enabled': False,
     'completion_snippet_first': False,
+    'completion_fuzzy': False,
     'yapf_style_config': 'pep8'
 }
 
@@ -421,14 +422,20 @@ def _completion_sort_key(completion: Completion, prefix: str = '') -> str:
 
 def _completion_item(completion: Completion, r: types.Range) -> Dict:
     label = completion.name
-    if not completion.complete.startswith("'") and label.startswith("'"):
+    _r = r
+    lnm = completion._like_name_length
+    if lnm == 1 and label[0] in {'"', "'"}:
+        lnm = 0
         label = label[1:]
+    elif lnm:
+        _r = types.Range(types.Position(r.start.line, r.start.character - lnm),
+                         r.end)
     return dict(
         label=label,
         kind=_COMPLETION_TYPES.get(completion.type,
                                    types.CompletionItemKind.Text),
         documentation=completion.docstring(raw=True),
-        text_edit=types.TextEdit(r, completion.complete)
+        text_edit=types.TextEdit(_r, label)
     )
 
 
@@ -488,7 +495,8 @@ def completions(ls: LanguageServer, params: types.CompletionParams):
     script = get_script(ls, params.textDocument.uri)
     completions = script.complete(
         params.position.line + 1,
-        params.position.character
+        params.position.character,
+        fuzzy=config['completion_fuzzy']
     )
     code_line = script._code_lines[params.position.line]
     word_match = RE_WORD.match(code_line[params.position.character:])

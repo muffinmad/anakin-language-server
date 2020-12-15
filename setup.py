@@ -7,7 +7,7 @@ with open('README.md', 'r') as f:
 
 setup(
     name='anakin-language-server',
-    version='1.8.2',
+    version='1.9',
     author='Andrii Kolomoiets',
     author_email='andreyk.mad@gmail.com',
     description='Yet another Jedi Python language server',
@@ -29,7 +29,7 @@ setup(
         ]
     },
     classifiers=[
-        "Development Status :: 4 - Beta",
+        "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Operating System :: OS Independent",

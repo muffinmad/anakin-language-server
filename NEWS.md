@@ -1,5 +1,13 @@
 # NEWS
 
+## 1.9
+
+- Fuzzy completions
+
+## 1.8.2
+
+- Don't pass `[None]` as paths to pycodestyle
+
 ## 1.8.1
 
 - Bind Jedi's completion type `property` to `CompletionItemKind.Property`
