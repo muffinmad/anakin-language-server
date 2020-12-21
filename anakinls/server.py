@@ -89,7 +89,10 @@ class AnakinLanguageServerProtocol(LanguageServerProtocol):
         global documentSymbolFunction
         global hoverMarkup
         global hoverFunction
-        venv = getattr(params.initializationOptions, 'venv', None)
+        try:
+            venv = getattr(params.initializationOptions, 'venv', None)
+        except AttributeError:
+            venv = None
         if venv:
             jediEnvironment = create_environment(venv, False)
         else:

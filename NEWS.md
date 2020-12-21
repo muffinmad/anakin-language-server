@@ -1,5 +1,9 @@
 # NEWS
 
+## 1.10.1
+
+- Handle missed `initializationOptions`
+
 ## 1.10
 
 - Publish diagnostics on document change
