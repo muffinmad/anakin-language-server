@@ -94,7 +94,7 @@ class AnakinLanguageServerProtocol(LanguageServerProtocol):
         except AttributeError:
             venv = None
         if venv:
-            jediEnvironment = create_environment(venv, False)
+            jediEnvironment = create_environment(venv, safe=False)
         else:
             jediEnvironment = get_default_environment()
         jediProject = get_default_project(getattr(params, 'rootPath', None))

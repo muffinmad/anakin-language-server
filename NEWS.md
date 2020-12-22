@@ -1,5 +1,9 @@
 # NEWS
 
+## 1.10.3
+
+- `create_environment` takes 1 positional argument
+
 ## 1.10.2
 
 - Handle `pathlib.Path` from `jedi` (#17)
