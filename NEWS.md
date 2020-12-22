@@ -1,5 +1,9 @@
 # NEWS
 
+## 1.10.2
+
+- Handle `pathlib.Path` from `jedi` (#17)
+
 ## 1.10.1
 
 - Handle missed `initializationOptions`

@@ -603,7 +603,7 @@ def _get_name_range(name: Name) -> types.Range:
 def _get_locations(defs: List[Name]) -> List[types.Location]:
     return [
         types.Location(
-            from_fs_path(d.module_path),
+            from_fs_path(str(d.module_path)),
             _get_name_range(d)
         )
         for d in defs if d.module_path
@@ -823,7 +823,7 @@ def _get_document_changes(
         text_edits = _get_text_edits(changes._module_node.get_code(),
                                      changes.get_new_code())
         if text_edits:
-            uri = from_fs_path(fn)
+            uri = from_fs_path(str(fn))
             result.append(types.TextDocumentEdit(
                 types.VersionedTextDocumentIdentifier(
                     uri,
