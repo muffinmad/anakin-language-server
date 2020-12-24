@@ -65,9 +65,6 @@ _COMPLETION_TYPES = {
 }
 
 
-jedi_settings.case_insensitive_completion = False
-
-
 completionFunction: Callable[[List[Completion], types.Range],
                              Iterator[types.CompletionItem]]
 documentSymbolFunction: Union[
@@ -654,6 +651,11 @@ def did_change_configuration(ls: LanguageServer,
                     completionPrefixSnippet = 'z'
             else:
                 changed.add(k)
+    if hasattr(settings.settings.anakinls, 'jedi_settings'):
+        for k in settings.settings.anakinls.jedi_settings._fields:
+            v = getattr(settings.settings.anakinls.jedi_settings, k)
+            setattr(jedi_settings, k, v)
+
     if 'pycodestyle_config' in changed:
         pycodestyleOptions.clear()
     if 'mypy_enabled' in changed:

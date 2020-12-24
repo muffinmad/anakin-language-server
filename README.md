@@ -72,6 +72,7 @@ Available options:
 |`pycodestyle_config`|In addition to project and user level config, specify pycodestyle config file. Same as `--config` option for `pycodestyle`.|`None`|
 |`mypy_enabled`|Use [`mypy`](https://mypy.readthedocs.io/en/stable/index.html) to provide diagnostics.|`False`|
 |`yapf_style_config`|Either a style name or a path to a file that contains formatting style settings.|`'pep8'`|
+|`jedi_settings`|Global [Jedi settings](https://jedi.readthedocs.io/en/latest/docs/settings.html).<br>E.g. set it to `{"case_insensitive_completion": False}` to turn off case insensitive completion|`{}`|
 
 ## Configuration example
 

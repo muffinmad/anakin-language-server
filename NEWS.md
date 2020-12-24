@@ -1,5 +1,10 @@
 # NEWS
 
+## 1.11
+
+- Expose an interface so that the user can adjust Jedi configuration
+- Case insensitive completions
+
 ## 1.10.3
 
 - `create_environment` takes 1 positional argument
