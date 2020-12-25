@@ -1,5 +1,9 @@
 # NEWS
 
+## 1.12
+
+- Use Jedi v0.18
+
 ## 1.11
 
 - Expose an interface so that the user can adjust Jedi configuration

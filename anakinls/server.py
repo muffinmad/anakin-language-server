@@ -46,7 +46,7 @@ from pygls.features import (COMPLETION, TEXT_DOCUMENT_DID_CHANGE,
 from pygls import types
 from pygls.server import LanguageServer
 from pygls.protocol import LanguageServerProtocol
-from pygls.uris import from_fs_path, to_fs_path
+from pygls.uris import to_fs_path
 
 from .version import get_version  # type: ignore
 
@@ -600,7 +600,7 @@ def _get_name_range(name: Name) -> types.Range:
 def _get_locations(defs: List[Name]) -> List[types.Location]:
     return [
         types.Location(
-            from_fs_path(str(d.module_path)),
+            d.module_path.absolute().as_uri(),
             _get_name_range(d)
         )
         for d in defs if d.module_path
@@ -825,7 +825,7 @@ def _get_document_changes(
         text_edits = _get_text_edits(changes._module_node.get_code(),
                                      changes.get_new_code())
         if text_edits:
-            uri = from_fs_path(str(fn))
+            uri = fn.absolute().as_uri()
             result.append(types.TextDocumentEdit(
                 types.VersionedTextDocumentIdentifier(
                     uri,
