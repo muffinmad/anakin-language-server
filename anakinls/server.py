@@ -26,7 +26,6 @@ from jedi import (Script, create_environment,  # type: ignore
                   RefactoringError)
 from jedi.api.classes import Name, Completion  # type: ignore
 from jedi.api.refactoring import Refactoring  # type: ignore
-from parso import split_lines  # type: ignore
 
 from pycodestyle import (BaseReport as CodestyleBaseReport,  # type: ignore
                          Checker as CodestyleChecker,
@@ -770,10 +769,8 @@ def document_symbol(
     return result
 
 
-def _get_text_edits(old: str, new: str) -> List[types.TextEdit]:
+def _get_text_edits(diff: str) -> List[types.TextEdit]:
     result = []
-    old_lines = split_lines(old, keepends=True)
-    new_lines = split_lines(new, keepends=True)
     line_number = 0
     start = None
     replace_lines = False
@@ -787,14 +784,10 @@ def _get_text_edits(old: str, new: str) -> List[types.TextEdit]:
         result.append(
             types.TextEdit(
                 types.Range(start, end),
-                ''.join(lines)
-            )
-        )
+                ''.join(lines)))
 
-    for line in differ.compare(old_lines, new_lines):
+    for line in diff.splitlines(True)[2:]:
         kind = line[0]
-        if kind == '?':
-            continue
         if kind == '-':
             if not start:
                 start = types.Position(line_number)
@@ -804,14 +797,17 @@ def _get_text_edits(old: str, new: str) -> List[types.TextEdit]:
         if kind == '+':
             if not start:
                 start = types.Position(line_number)
-            lines.append(line[2:])
+            lines.append(line[1:])
             continue
         if start:
             _append()
             start = None
             replace_lines = False
             lines = []
-        line_number += 1
+        if kind == '@':
+            line_number = int(line[4:line.index(',')]) - 1
+        else:
+            line_number += 1
     if start:
         _append()
     return result
@@ -822,8 +818,7 @@ def _get_document_changes(
 ) -> List[types.TextDocumentEdit]:
     result = []
     for fn, changes in refactoring.get_changed_files().items():
-        text_edits = _get_text_edits(changes._module_node.get_code(),
-                                     changes.get_new_code())
+        text_edits = _get_text_edits(changes.get_diff())
         if text_edits:
             uri = fn.absolute().as_uri()
             result.append(types.TextDocumentEdit(
@@ -863,9 +858,11 @@ def _formatting(
 ) -> Optional[List[types.TextEdit]]:
     old = get_script(ls, uri)._code
     lines = [(range_.start.line + 1, range_.end.line + 1)] if range_ else None
-    new, changed = FormatCode(old, style_config=config['yapf_style_config'],
-                              lines=lines)
-    return _get_text_edits(old, new) if changed else None
+    diff, changed = FormatCode(old, style_config=config['yapf_style_config'],
+                               lines=lines, print_diff=True)
+    if not changed:
+        return None
+    return _get_text_edits(diff)
 
 
 @server.feature(FORMATTING)

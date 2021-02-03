@@ -81,3 +81,50 @@ foo'''
     assert isinstance(h.contents, types.MarkupContent)
     assert h.contents.kind == types.MarkupKind.PlainText
     assert h.contents.value == 'foo(a, *, b, c=None)\n\ndocstring'
+
+
+def test_diff_to_edits():
+    diff = '''--- /path/to/original	timestamp
++++ /path/to/new	timestamp
+@@ -1,3 +1,9 @@
++This is an important
++notice! It should
++therefore be located at
++the beginning of this
++document!
++
+ This part of the
+ document has stayed the
+ same from version to
+@@ -8,13 +14,8 @@
+ compress the size of the
+ changes.
+
+-This paragraph contains
+-text that is outdated.
+-It will be deleted in the
+-near future.
+-
+ It is important to spell
+-check this dokument. On
++check this document. On
+ the other hand, a
+ misspelled word isn't
+ the end of the world.
+@@ -22,3 +23,7 @@
+ this paragraph needs to
+ be changed. Things can
+ be added after it.
++
++This paragraph contains
++important new additions
++to this document.
+'''
+    edits = aserver._get_text_edits(diff)
+    assert len(edits) == 4
+    assert str(edits[0].range) == '0:0-0:0'
+    assert str(edits[1].range) == '10:0-15:0'
+    assert edits[1].newText == ''
+    assert str(edits[2].range) == '16:0-17:0'
+    assert edits[2].newText == 'check this document. On\n'
+    assert str(edits[3].range) == '24:0-24:0'
