@@ -17,7 +17,7 @@ from unittest.mock import Mock
 
 from anakinls import server as aserver
 
-from pygls import types
+from pygls.lsp import types
 from pygls.workspace import Document, Workspace
 
 
@@ -46,21 +46,22 @@ foo'''
     completion = aserver.completions(
         server,
         types.CompletionParams(
-            types.TextDocumentIdentifier(uri),
-            types.Position(4, 3),
-            types.CompletionContext(types.CompletionTriggerKind.Invoked)
+            text_document=types.TextDocumentIdentifier(uri=uri),
+            position=types.Position(line=4, character=3),
+            context=types.CompletionContext(
+                trigger_kind=types.CompletionTriggerKind.Invoked)
         ))
     assert len(completion.items) == 2
     item = completion.items[0]
-    assert item.insertText is None
+    assert item.insert_text is None
     assert item.label == 'foo'
-    assert item.sortText == 'aaafoo'
-    assert item.insertTextFormat is None
+    assert item.sort_text == 'aaafoo'
+    assert item.insert_text_format is None
     item = completion.items[1]
     assert item.label == 'foo(a, b)'
-    assert item.sortText == 'aazfoo'
-    assert item.insertTextFormat == types.InsertTextFormat.Snippet
-    assert item.insertText == 'foo(${1:a}, b=${2:b})$0'
+    assert item.sort_text == 'aazfoo'
+    assert item.insert_text_format == types.InsertTextFormat.Snippet
+    assert item.insert_text == 'foo(${1:a}, b=${2:b})$0'
 
 
 def test_hover():
@@ -75,8 +76,8 @@ foo'''
     server.workspace.get_document = Mock(return_value=doc)
     aserver.hoverFunction = aserver._docstring
     h = aserver.hover(server, types.TextDocumentPositionParams(
-        doc,
-        types.Position(5, 0)))
+        text_document=types.TextDocumentIdentifier(uri=uri),
+        position=types.Position(line=5, character=0)))
     assert h is not None
     assert isinstance(h.contents, types.MarkupContent)
     assert h.contents.kind == types.MarkupKind.PlainText
@@ -122,9 +123,9 @@ def test_diff_to_edits():
 '''
     edits = aserver._get_text_edits(diff)
     assert len(edits) == 4
-    assert str(edits[0].range) == '0:0-0:0'
-    assert str(edits[1].range) == '10:0-15:0'
-    assert edits[1].newText == ''
-    assert str(edits[2].range) == '16:0-17:0'
-    assert edits[2].newText == 'check this document. On\n'
-    assert str(edits[3].range) == '24:0-24:0'
+    assert str(edits[0].range) == 'start=0:0 end=0:0'
+    assert str(edits[1].range) == 'start=10:0 end=15:0'
+    assert edits[1].new_text == ''
+    assert str(edits[2].range) == 'start=16:0 end=17:0'
+    assert edits[2].new_text == 'check this document. On\n'
+    assert str(edits[3].range) == 'start=24:0 end=24:0'

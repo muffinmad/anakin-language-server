@@ -35,14 +35,14 @@ from pyflakes.api import check as pyflakes_check  # type: ignore
 
 from yapf.yapflib.yapf_api import FormatCode  # type: ignore
 
-from pygls.features import (COMPLETION, TEXT_DOCUMENT_DID_CHANGE,
-                            TEXT_DOCUMENT_DID_CLOSE, TEXT_DOCUMENT_DID_OPEN,
-                            HOVER, SIGNATURE_HELP, DEFINITION,
-                            REFERENCES, WORKSPACE_DID_CHANGE_CONFIGURATION,
-                            TEXT_DOCUMENT_WILL_SAVE, TEXT_DOCUMENT_DID_SAVE,
-                            DOCUMENT_SYMBOL, CODE_ACTION, FORMATTING,
-                            RANGE_FORMATTING, RENAME, DOCUMENT_HIGHLIGHT)
-from pygls import types
+from pygls.lsp.methods import (COMPLETION, TEXT_DOCUMENT_DID_CHANGE,
+                               TEXT_DOCUMENT_DID_CLOSE, TEXT_DOCUMENT_DID_OPEN,
+                               HOVER, SIGNATURE_HELP, DEFINITION,
+                               REFERENCES, WORKSPACE_DID_CHANGE_CONFIGURATION,
+                               TEXT_DOCUMENT_WILL_SAVE, TEXT_DOCUMENT_DID_SAVE,
+                               DOCUMENT_SYMBOL, CODE_ACTION, FORMATTING,
+                               RANGE_FORMATTING, RENAME, DOCUMENT_HIGHLIGHT)
+from pygls.lsp import types
 from pygls.server import LanguageServer
 from pygls.protocol import LanguageServerProtocol
 from pygls.uris import to_fs_path
@@ -86,7 +86,7 @@ class AnakinLanguageServerProtocol(LanguageServerProtocol):
         global hoverMarkup
         global hoverFunction
         try:
-            venv = getattr(params.initializationOptions, 'venv', None)
+            venv = getattr(params.initialization_options, 'venv', None)
         except AttributeError:
             venv = None
         if venv:
@@ -108,20 +108,20 @@ class AnakinLanguageServerProtocol(LanguageServerProtocol):
             except AttributeError:
                 return None
 
-        caps = getattr(params.capabilities, 'textDocument', None)
+        caps = getattr(params.capabilities, 'text_document', None)
 
-        if get_attr(caps, 'completion', 'completionItem', 'snippetSupport'):
+        if get_attr(caps, 'completion', 'completion_item', 'snippet_support'):
             completionFunction = _completions_snippets
         else:
             completionFunction = _completions
 
         if get_attr(caps,
-                    'documentSymbol', 'hierarchicalDocumentSymbolSupport'):
+                    'document_symbol', 'hierarchical_document_symbol_support'):
             documentSymbolFunction = _document_symbol_hierarchy
         else:
             documentSymbolFunction = _document_symbol_plain
 
-        hover = get_attr(caps, 'hover', 'contentFormat')
+        hover = get_attr(caps, 'hover', 'content_format')
         if hover:
             hoverMarkup = hover[0]
         if hoverMarkup == types.MarkupKind.Markdown:
@@ -129,20 +129,11 @@ class AnakinLanguageServerProtocol(LanguageServerProtocol):
         else:
             hoverFunction = _docstring
 
-        result.capabilities.textDocumentSync = types.TextDocumentSyncOptions(
-            open_close=True,
-            change=types.TextDocumentSyncKind.INCREMENTAL,
-            save=types.SaveOptions()
-        )
-        result.capabilities.codeActionProvider = types.CodeActionOptions([
-            types.CodeActionKind.RefactorInline,
-            types.CodeActionKind.RefactorExtract
-        ])
         # pygls does not currently support serverInfo of LSP v3.15
-        result.serverInfo = {
-            'name': 'anakinls',
-            'version': get_version(),
-        }
+        result.server_info = types.ServerInfo(
+            name='anakinls',
+            version=get_version(),
+        )
         return result
 
 
@@ -361,12 +352,14 @@ def _validate(ls: LanguageServer, uri: str, script: Script = None):
     # Jedi
     result = [
         types.Diagnostic(
-            types.Range(
-                types.Position(x.line - 1, x.column),
-                types.Position(x.until_line - 1, x.until_column)
+            range=types.Range(
+                starts=types.Position(line=x.line - 1,
+                                      character=x.column),
+                end=types.Position(line=x.until_line - 1,
+                                   charecter=x.until_column)
             ),
-            x.get_message(),
-            types.DiagnosticSeverity.Error,
+            message=x.get_message(),
+            severity=types.DiagnosticSeverity.Error,
             source='jedi'
         )
         for x in script.get_syntax_errors()
@@ -400,22 +393,22 @@ def _validate(ls: LanguageServer, uri: str, script: Script = None):
 @server.feature(TEXT_DOCUMENT_DID_OPEN)
 def did_open(ls: LanguageServer, params: types.DidOpenTextDocumentParams):
     if config['diagnostic_on_open']:
-        _validate(ls, params.textDocument.uri)
+        _validate(ls, params.text_document.uri)
 
 
 @server.feature(TEXT_DOCUMENT_DID_CLOSE)
 def did_close(ls: LanguageServer, params: types.DidCloseTextDocumentParams):
     try:
-        del scripts[params.textDocument.uri]
+        del scripts[params.text_document.uri]
     except KeyError:
         pass
 
 
 @server.feature(TEXT_DOCUMENT_DID_CHANGE)
 def did_change(ls: LanguageServer, params: types.DidChangeTextDocumentParams):
-    script = get_script(ls, params.textDocument.uri, True)
+    script = get_script(ls, params.text_document.uri, True)
     if config['diagnostic_on_change']:
-        _validate(ls, params.textDocument.uri, script)
+        _validate(ls, params.text_document.uri, script)
 
 
 def _completion_sort_key(completion: Completion, prefix: str = '') -> str:
@@ -435,14 +428,16 @@ def _completion_item(completion: Completion, r: types.Range) -> Dict:
         lnm = 0
         label = label[1:]
     elif lnm:
-        _r = types.Range(types.Position(r.start.line, r.start.character - lnm),
-                         r.end)
+        _r = types.Range(
+            start=types.Position(line=r.start.line,
+                                 character=r.start.character - lnm),
+            end=r.end)
     return dict(
         label=label,
         kind=_COMPLETION_TYPES.get(completion.type,
                                    types.CompletionItemKind.Text),
         documentation=completion.docstring(raw=True),
-        text_edit=types.TextEdit(_r, label)
+        text_edit=types.TextEdit(range=_r, new_text=label)
     )
 
 
@@ -497,9 +492,9 @@ def _completions_snippets(completions: List[Completion],
             ))
 
 
-@server.feature(COMPLETION, trigger_characters=['.'])
+@server.feature(COMPLETION, types.CompletionOptions(trigger_characters=['.']))
 def completions(ls: LanguageServer, params: types.CompletionParams):
-    script = get_script(ls, params.textDocument.uri)
+    script = get_script(ls, params.text_document.uri)
     completions = script.complete(
         params.position.line + 1,
         params.position.character,
@@ -512,13 +507,13 @@ def completions(ls: LanguageServer, params: types.CompletionParams):
     else:
         word_rest = 0
     r = types.Range(
-        types.Position(params.position.line,
-                       params.position.character),
-        types.Position(params.position.line,
-                       params.position.character + word_rest)
+        start=types.Position(line=params.position.line,
+                             character=params.position.character),
+        end=types.Position(line=params.position.line,
+                           character=params.position.character + word_rest)
     )
-    return types.CompletionList(False,
-                                list(completionFunction(completions, r)))
+    return types.CompletionList(is_incomplete=False,
+                                items=list(completionFunction(completions, r)))
 
 
 def _docstring(name: Name) -> str:
@@ -545,24 +540,25 @@ def _docstring_markdown(name: Name) -> str:
 @server.feature(HOVER)
 def hover(ls: LanguageServer,
           params: types.TextDocumentPositionParams) -> Optional[types.Hover]:
-    script = get_script(ls, params.textDocument.uri)
+    script = get_script(ls, params.text_document.uri)
     names = jediHoverFunction(script,
                               params.position.line + 1,
                               params.position.character)
     result = '\n\n'.join(map(hoverFunction, names))
     if result:
         return types.Hover(
-            types.MarkupContent(hoverMarkup, result)
+            contents=types.MarkupContent(kind=hoverMarkup, value=result)
         )
     return None
 
 
-@server.feature(SIGNATURE_HELP, trigger_characters=['(', ','])
+@server.feature(SIGNATURE_HELP,
+                types.SignatureHelpOptions(trigger_characters=['(', ',']))
 def signature_help(
         ls: LanguageServer,
         params: types.TextDocumentPositionParams
 ) -> Optional[types.SignatureHelp]:
-    script = get_script(ls, params.textDocument.uri)
+    script = get_script(ls, params.text_document.uri)
     signatures = script.get_signatures(params.position.line + 1,
                                        params.position.character)
 
@@ -574,9 +570,9 @@ def signature_help(
         if signature.index is None:
             continue
         result.append(types.SignatureInformation(
-            signature.to_string(),
+            label=signature.to_string(),
             parameters=[
-                types.ParameterInformation(param.name)
+                types.ParameterInformation(label=param.name)
                 for param in signature.params
             ]
         ))
@@ -585,22 +581,26 @@ def signature_help(
             idx = i
         i += 1
     if result:
-        return types.SignatureHelp([result[idx]], 0, param_idx)
+        return types.SignatureHelp(
+            signatures=[result[idx]],
+            active_signature=0,
+            active_parameter=param_idx)
     return None
 
 
 def _get_name_range(name: Name) -> types.Range:
     return types.Range(
-        types.Position(name.line - 1, name.column),
-        types.Position(name.line - 1, name.column + len(name.name))
+        start=types.Position(line=name.line - 1, character=name.column),
+        end=types.Position(line=name.line - 1,
+                           character=name.column + len(name.name))
     )
 
 
 def _get_locations(defs: List[Name]) -> List[types.Location]:
     return [
         types.Location(
-            d.module_path.absolute().as_uri(),
-            _get_name_range(d)
+            uri=d.module_path.absolute().as_uri(),
+            range=_get_name_range(d)
         )
         for d in defs if d.module_path
     ]
@@ -610,7 +610,7 @@ def _get_locations(defs: List[Name]) -> List[types.Location]:
 def definition(
         ls: LanguageServer,
         params: types.TextDocumentPositionParams) -> List[types.Location]:
-    script = get_script(ls, params.textDocument.uri)
+    script = get_script(ls, params.text_document.uri)
     defs = script.goto(params.position.line + 1, params.position.character)
     return _get_locations(defs)
 
@@ -618,7 +618,7 @@ def definition(
 @server.feature(REFERENCES)
 def references(ls: LanguageServer,
                params: types.ReferenceParams) -> List[types.Location]:
-    script = get_script(ls, params.textDocument.uri)
+    script = get_script(ls, params.text_document.uri)
     refs = script.get_references(params.position.line + 1,
                                  params.position.character)
     return _get_locations(refs)
@@ -672,7 +672,7 @@ def will_save(ls: LanguageServer, params: types.WillSaveTextDocumentParams):
 @server.feature(TEXT_DOCUMENT_DID_SAVE)
 def did_save(ls: LanguageServer, params: types.DidSaveTextDocumentParams):
     if config['diagnostic_on_save']:
-        _validate(ls, params.textDocument.uri)
+        _validate(ls, params.text_document.uri)
 
 
 _DOCUMENT_SYMBOL_KINDS = {
@@ -706,14 +706,14 @@ def _get_document_symbols(
         )
         line = name.line - 1
         r = types.Range(
-            types.Position(line, name.column),
-            types.Position(line, len(code_lines[line]) - 1)
+            start=types.Position(line=line, character=name.column),
+            end=types.Position(line=line, character=len(code_lines[line]) - 1)
         )
         result.append(types.DocumentSymbol(
-            name.name,
-            _DOCUMENT_SYMBOL_KINDS.get(name.type, types.SymbolKind.Null),
-            r,
-            r,
+            name=name.name,
+            kind=_DOCUMENT_SYMBOL_KINDS.get(name.type, types.SymbolKind.Null),
+            range=r,
+            selection_range=r,
             children=children or None
         ))
     return result
@@ -757,12 +757,12 @@ def _document_symbol_plain(
 def document_symbol(
         ls: LanguageServer, params: types.DocumentSymbolParams
 ) -> Union[List[types.DocumentSymbol], List[types.SymbolInformation], None]:
-    script = get_script(ls, params.textDocument.uri)
+    script = get_script(ls, params.text_document.uri)
     names = script.get_names(all_scopes=True)
     if not names:
         return None
     result = documentSymbolFunction(
-        params.textDocument.uri,
+        params.text_document.uri,
         script._code_lines,
         script.get_names(all_scopes=True)
     )
@@ -778,25 +778,25 @@ def _get_text_edits(diff: str) -> List[types.TextEdit]:
 
     def _append():
         if replace_lines:
-            end = types.Position(line_number)
+            end = types.Position(line=line_number, character=0)
         else:
             end = start
         result.append(
             types.TextEdit(
-                types.Range(start, end),
-                ''.join(lines)))
+                range=types.Range(start=start, end=end),
+                new_text=''.join(lines)))
 
     for line in diff.splitlines(True)[2:]:
         kind = line[0]
         if kind == '-':
             if not start:
-                start = types.Position(line_number)
+                start = types.Position(line=line_number, character=0)
             replace_lines = True
             line_number += 1
             continue
         if kind == '+':
             if not start:
-                start = types.Position(line_number)
+                start = types.Position(line=line_number, character=0)
             lines.append(line[1:])
             continue
         if start:
@@ -822,23 +822,26 @@ def _get_document_changes(
         if text_edits:
             uri = fn.absolute().as_uri()
             result.append(types.TextDocumentEdit(
-                types.VersionedTextDocumentIdentifier(
-                    uri,
-                    ls.workspace.get_document(uri).version
+                text_document=types.VersionedTextDocumentIdentifier(
+                    uri=uri,
+                    version=ls.workspace.get_document(uri).version
                 ),
-                text_edits
+                edits=text_edits
             ))
     return result
 
 
-@server.feature(CODE_ACTION)
+@server.feature(CODE_ACTION, types.CodeActionOptions(
+    code_action_kinds=[
+        types.CodeActionKind.RefactorInline,
+        types.CodeActionKind.RefactorExtract]))
 def code_action(
         ls: LanguageServer, params: types.CodeActionParams
 ) -> Optional[List[types.CodeAction]]:
     if params.range.start != params.range.end:
         # No selection actions
         return None
-    script = get_script(ls, params.textDocument.uri)
+    script = get_script(ls, params.text_document.uri)
     try:
         refactoring = script.inline(params.range.start.line + 1,
                                     params.range.start.character)
@@ -847,8 +850,8 @@ def code_action(
     document_changes = _get_document_changes(ls, refactoring)
     if document_changes:
         return [types.CodeAction(
-            'Inline variable',
-            types.CodeActionKind.RefactorInline,
+            title='Inline variable',
+            kind=types.CodeActionKind.RefactorInline,
             edit=types.WorkspaceEdit(document_changes=document_changes))]
     return None
 
@@ -869,24 +872,24 @@ def _formatting(
 def formatting(
         ls: LanguageServer, params: types.DocumentFormattingParams
 ) -> Optional[List[types.TextEdit]]:
-    return _formatting(ls, params.textDocument.uri)
+    return _formatting(ls, params.text_document.uri)
 
 
 @server.feature(RANGE_FORMATTING)
 def range_formatting(
         ls: LanguageServer, params: types.DocumentRangeFormattingParams
 ) -> Optional[List[types.TextEdit]]:
-    return _formatting(ls, params.textDocument.uri, params.range)
+    return _formatting(ls, params.text_document.uri, params.range)
 
 
 @server.feature(RENAME)
 def rename(ls: LanguageServer,
            params: types.RenameParams) -> Optional[types.WorkspaceEdit]:
-    script = get_script(ls, params.textDocument.uri)
+    script = get_script(ls, params.text_document.uri)
     try:
         refactoring = script.rename(params.position.line + 1,
                                     params.position.character,
-                                    new_name=params.newName)
+                                    new_name=params.new_name)
     except RefactoringError:
         return None
     document_changes = _get_document_changes(ls, refactoring)
@@ -899,7 +902,7 @@ def rename(ls: LanguageServer,
 def highlight(
         ls: LanguageServer, params: types.TextDocumentPositionParams
 ) -> Optional[List[types.DocumentHighlight]]:
-    script = get_script(ls, params.textDocument.uri)
+    script = get_script(ls, params.text_document.uri)
     names = script.get_references(params.position.line + 1,
                                   params.position.character,
                                   scope='file')
@@ -907,7 +910,7 @@ def highlight(
         return None
     return [
         types.DocumentHighlight(
-            _get_name_range(name)
+            range=_get_name_range(name)
         )
         for name in names
     ]
