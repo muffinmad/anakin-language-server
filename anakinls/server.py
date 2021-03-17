@@ -192,9 +192,9 @@ class PyflakesReporter:
 
     def unexpectedError(self, _filename, msg):
         self.result.append(types.Diagnostic(
-            types.Range(types.Position(), types.Position()),
-            msg,
-            types.DiagnosticSeverity.Error,
+            range=types.Range(types.Position(), types.Position()),
+            message=msg,
+            severity=types.DiagnosticSeverity.Error,
             source='pyflakes'
         ))
 
@@ -205,12 +205,13 @@ class PyflakesReporter:
         line = lineno - 1
         col = offset or 0
         self.result.append(types.Diagnostic(
-            types.Range(
-                types.Position(line, col),
-                types.Position(line, len(self._get_codeline(line)) - col)
-            ),
-            msg,
-            types.DiagnosticSeverity.Error,
+            range=types.Range(
+                start=types.Position(line=line, character=col),
+                end=types.Position(
+                    line=line,
+                    character=len(self._get_codeline(line)) - col)),
+            message=msg,
+            severity=types.DiagnosticSeverity.Error,
             source='pyflakes'
         ))
 
@@ -221,12 +222,12 @@ class PyflakesReporter:
         else:
             severity = types.DiagnosticSeverity.Warning
         self.result.append(types.Diagnostic(
-            types.Range(
-                types.Position(line, message.col),
-                types.Position(line, len(self._get_codeline(line)))
+            range=types.Range(
+                start=types.Position(line, message.col),
+                end=types.Position(line, len(self._get_codeline(line)))
             ),
-            message.message % message.message_args,
-            severity,
+            message=message.message % message.message_args,
+            severity=severity,
             source='pyflakes'
         ))
 
@@ -243,14 +244,16 @@ class CodestyleReport(CodestyleBaseReport):
             return
         line = line_number - 1
         self.result.append(types.Diagnostic(
-            types.Range(
-                types.Position(line, offset),
-                types.Position(line, len(self.lines[line].rstrip('\n\r')))
+            range=types.Range(
+                start=types.Position(line=line, character=offset),
+                end=types.Position(
+                    line=line,
+                    character=len(self.lines[line].rstrip('\n\r')))
             ),
-            text,
-            types.DiagnosticSeverity.Warning,
-            code,
-            'pycodestyle'
+            message=text,
+            severity=types.DiagnosticSeverity.Warning,
+            code=code,
+            source='pycodestyle'
         ))
 
 
@@ -333,12 +336,13 @@ def _mypy_check(ls: LanguageServer, uri: str, script: Script,
             severity = types.DiagnosticSeverity.Warning
         result.append(
             types.Diagnostic(
-                types.Range(
-                    types.Position(row, column),
-                    types.Position(row, len(script._code_lines[row]))
-                ),
-                message.strip(),
-                severity,
+                range=types.Range(
+                    start=types.Position(line=row, character=column),
+                    end=types.Position(
+                        line=row,
+                        character=len(script._code_lines[row]))),
+                message=message.strip(),
+                severity=severity,
                 source='mypy'
             )
         )
@@ -494,6 +498,7 @@ def _completions_snippets(completions: List[Completion],
 
 @server.feature(COMPLETION, types.CompletionOptions(trigger_characters=['.']))
 def completions(ls: LanguageServer, params: types.CompletionParams):
+    global completionFunction
     script = get_script(ls, params.text_document.uri)
     completions = script.complete(
         params.position.line + 1,
@@ -540,6 +545,8 @@ def _docstring_markdown(name: Name) -> str:
 @server.feature(HOVER)
 def hover(ls: LanguageServer,
           params: types.TextDocumentPositionParams) -> Optional[types.Hover]:
+    global hoverFunction
+    global jediHoverFunction
     script = get_script(ls, params.text_document.uri)
     names = jediHoverFunction(script,
                               params.position.line + 1,
@@ -741,14 +748,16 @@ def _document_symbol_plain(
                 elif parent_name.startswith(f'{module_name}.'):
                     parent_name = parent_name[len(module_name) + 1:]
             yield types.SymbolInformation(
-                name.name,
-                _DOCUMENT_SYMBOL_KINDS.get(name.type, types.SymbolKind.Null),
-                types.Location(uri, types.Range(
-                    types.Position(name.line - 1, name.column),
-                    types.Position(name.line - 1,
-                                   len(code_lines[name.line - 1]) - 1)
-                )),
-                parent_name
+                name=name.name,
+                kind=_DOCUMENT_SYMBOL_KINDS.get(name.type,
+                                                types.SymbolKind.Null),
+                location=types.Location(uri=uri, range=types.Range(
+                    start=types.Position(line=name.line - 1,
+                                         character=name.column),
+                    end=types.Position(
+                        line=name.line - 1,
+                        characret=len(code_lines[name.line - 1]) - 1))),
+                container_name=parent_name
             )
     return list(_symbols())
 
@@ -761,6 +770,7 @@ def document_symbol(
     names = script.get_names(all_scopes=True)
     if not names:
         return None
+    global documentSymbolFunction
     result = documentSymbolFunction(
         params.text_document.uri,
         script._code_lines,
