@@ -192,7 +192,8 @@ class PyflakesReporter:
 
     def unexpectedError(self, _filename, msg):
         self.result.append(types.Diagnostic(
-            range=types.Range(types.Position(), types.Position()),
+            range=types.Range(start=types.Position(line=0, character=0),
+                              end=types.Position(line=0, character=0)),
             message=msg,
             severity=types.DiagnosticSeverity.Error,
             source='pyflakes'
@@ -223,9 +224,9 @@ class PyflakesReporter:
             severity = types.DiagnosticSeverity.Warning
         self.result.append(types.Diagnostic(
             range=types.Range(
-                start=types.Position(line, message.col),
-                end=types.Position(line, len(self._get_codeline(line)))
-            ),
+                start=types.Position(line=line, character=message.col),
+                end=types.Position(line=line,
+                                   character=len(self._get_codeline(line)))),
             message=message.message % message.message_args,
             severity=severity,
             source='pyflakes'
