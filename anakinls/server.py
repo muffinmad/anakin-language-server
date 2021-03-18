@@ -676,7 +676,8 @@ def will_save(ls: LanguageServer, params: types.WillSaveTextDocumentParams):
     pass
 
 
-@server.feature(TEXT_DOCUMENT_DID_SAVE)
+@server.feature(TEXT_DOCUMENT_DID_SAVE,
+                types.TextDocumentSaveRegistrationOptions(include_text=False))
 def did_save(ls: LanguageServer, params: types.DidSaveTextDocumentParams):
     if config['diagnostic_on_save']:
         _validate(ls, params.text_document.uri)
