@@ -635,33 +635,34 @@ def references(ls: LanguageServer,
 @server.feature(WORKSPACE_DID_CHANGE_CONFIGURATION)
 def did_change_configuration(ls: LanguageServer,
                              settings: types.DidChangeConfigurationParams):
-    if not settings.settings or not hasattr(settings.settings, 'anakinls'):
+    if not settings.settings or 'anakinls' not in settings.settings:
         return
+    conf = settings.settings['anakinls']
     changed = set()
     for k in config:
-        if hasattr(settings.settings.anakinls, k):
-            config[k] = v = getattr(settings.settings.anakinls, k)
-            if k == 'help_on_hover':
-                global jediHoverFunction
-                if v:
-                    jediHoverFunction = Script.help
-                else:
-                    jediHoverFunction = Script.infer
-            elif k == 'completion_snippet_first':
-                global completionPrefixPlain
-                global completionPrefixSnippet
-                if v:
-                    completionPrefixPlain = 'z'
-                    completionPrefixSnippet = 'a'
-                else:
-                    completionPrefixPlain = 'a'
-                    completionPrefixSnippet = 'z'
+        if k not in conf:
+            continue
+        config[k] = v = conf[k]
+        if k == 'help_on_hover':
+            global jediHoverFunction
+            if v:
+                jediHoverFunction = Script.help
             else:
-                changed.add(k)
-    if hasattr(settings.settings.anakinls, 'jedi_settings'):
-        for k in settings.settings.anakinls.jedi_settings._fields:
-            v = getattr(settings.settings.anakinls.jedi_settings, k)
-            setattr(jedi_settings, k, v)
+                jediHoverFunction = Script.infer
+        elif k == 'completion_snippet_first':
+            global completionPrefixPlain
+            global completionPrefixSnippet
+            if v:
+                completionPrefixPlain = 'z'
+                completionPrefixSnippet = 'a'
+            else:
+                completionPrefixPlain = 'a'
+                completionPrefixSnippet = 'z'
+        else:
+            changed.add(k)
+    if 'jedi_settings' in conf:
+        for key, value in conf['jedi_settings'].items():
+            setattr(jedi_settings, key, value)
 
     if 'pycodestyle_config' in changed:
         pycodestyleOptions.clear()
