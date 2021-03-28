@@ -7,7 +7,7 @@ with open('README.md', 'r') as f:
 
 setup(
     name='anakin-language-server',
-    version='1.12',
+    version='1.13',
     author='Andrii Kolomoiets',
     author_email='andreyk.mad@gmail.com',
     description='Yet another Jedi Python language server',
@@ -18,7 +18,7 @@ setup(
     python_requires='>=3.6',
     install_requires=[
         'jedi>=0.18.0',
-        'pygls~=0.10',
+        'pygls>=0.10.2,<0.11',
         'pyflakes~=2.2',
         'pycodestyle~=2.5',
         'yapf~=0.30'
