@@ -1,5 +1,10 @@
 # NEWS
 
+## 1.13
+
+- Use pygls 0.10.2
+- Faster document changes builder
+
 ## 1.12
 
 - Use Jedi v0.18
