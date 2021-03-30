@@ -4,7 +4,7 @@ Yet another Jedi Python language server
 ## Requirements
 
 - Python >= 3.6
-- pygls ~= 0.9
+- pygls >= 0.10.2,<0.11
 - Jedi >= 0.18
 - pyflakes ~= 2.2
 - pycodestyle ~= 2.5

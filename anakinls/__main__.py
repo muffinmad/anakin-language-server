@@ -48,6 +48,11 @@ def main():
         help='Print version and exit'
     )
 
+    parser.add_argument(
+        '-v', action='store_true',
+        help='Verbose output'
+    )
+
     args = parser.parse_args()
 
     if args.version:
@@ -58,6 +63,10 @@ def main():
           PARTICULAR PURPOSE.
         '''))
         return
+
+    if args.v:
+        logging.basicConfig(level=logging.DEBUG)
+        logging.getLogger('pygls.protocol').setLevel(logging.DEBUG)
 
     if args.tcp:
         server.start_tcp(args.host, args.port)
