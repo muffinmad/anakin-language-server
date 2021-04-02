@@ -358,8 +358,8 @@ def _validate(ls: LanguageServer, uri: str, script: Script = None):
     result = [
         types.Diagnostic(
             range=types.Range(
-                starts=types.Position(line=x.line - 1,
-                                      character=x.column),
+                start=types.Position(line=x.line - 1,
+                                     character=x.column),
                 end=types.Position(line=x.until_line - 1,
                                    character=x.until_column)
             ),
