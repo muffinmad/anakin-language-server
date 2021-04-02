@@ -361,7 +361,7 @@ def _validate(ls: LanguageServer, uri: str, script: Script = None):
                 starts=types.Position(line=x.line - 1,
                                       character=x.column),
                 end=types.Position(line=x.until_line - 1,
-                                   charecter=x.until_column)
+                                   character=x.until_column)
             ),
             message=x.get_message(),
             severity=types.DiagnosticSeverity.Error,

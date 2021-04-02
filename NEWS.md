@@ -1,5 +1,9 @@
 # NEWS
 
+## 1.14
+
+- Fix typo causing Jedi errors not appear in diagnostics
+
 ## 1.13
 
 - Use pygls 0.10.2
