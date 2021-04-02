@@ -1,5 +1,9 @@
 # NEWS
 
+## 1.15
+
+- Fix one more typo causing Jedi errors not appear in diagnostics
+
 ## 1.14
 
 - Fix typo causing Jedi errors not appear in diagnostics
