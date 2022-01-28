@@ -7,7 +7,7 @@ with open('README.md', 'r') as f:
 
 setup(
     name='anakin-language-server',
-    version='1.15',
+    version='1.16',
     author='Andrii Kolomoiets',
     author_email='andreyk.mad@gmail.com',
     description='Yet another Jedi Python language server',

@@ -1,5 +1,9 @@
 # NEWS
 
+## 1.16
+
+- Use version 0 for not opened files on rename
+
 ## 1.15
 
 - Fix one more typo causing Jedi errors not appear in diagnostics

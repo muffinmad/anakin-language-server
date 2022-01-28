@@ -837,7 +837,7 @@ def _get_document_changes(
             result.append(types.TextDocumentEdit(
                 text_document=types.VersionedTextDocumentIdentifier(
                     uri=uri,
-                    version=ls.workspace.get_document(uri).version
+                    version=ls.workspace.get_document(uri).version or 0
                 ),
                 edits=text_edits
             ))
