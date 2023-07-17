@@ -861,7 +861,7 @@ def _get_document_changes(
     return result
 
 
-@server.feature(TEXT_DOCUMENT_CODE, types.CodeActionOptions(
+@server.feature(TEXT_DOCUMENT_CODE_ACTION, types.CodeActionOptions(
     code_action_kinds=[
         types.CodeActionKind.RefactorInline,
         types.CodeActionKind.RefactorExtract]))
@@ -912,7 +912,7 @@ def range_formatting(
     return _formatting(ls, params.text_document.uri, params.range)
 
 
-@server.feature(TEXT_DOCUMENT)
+@server.feature(TEXT_DOCUMENT_RENAME)
 def rename(ls: LanguageServer,
            params: types.RenameParams) -> Optional[types.WorkspaceEdit]:
     script = get_script(ls, params.text_document.uri)
