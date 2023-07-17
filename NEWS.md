@@ -1,5 +1,9 @@
 # NEWS
 
+## 1.17
+
+- Migrating to pygls v1.0
+
 ## 1.16
 
 - Use version 0 for not opened files on rename

@@ -18,7 +18,7 @@ setup(
     python_requires='>=3.6',
     install_requires=[
         'jedi>=0.18.0',
-        'pygls>=0.10.2,<0.11',
+        'pygls>=1.0.2,<1.1',
         'pyflakes~=2.2',
         'pycodestyle~=2.5',
         'yapf~=0.30'
