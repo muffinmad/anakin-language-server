@@ -1,17 +1,16 @@
+from pathlib import Path
 from setuptools import setup  # type: ignore
 
-
-with open('README.md', 'r') as f:
-    long_description = f.read()
+from anakinls import version
 
 
 setup(
     name='anakin-language-server',
-    version='1.16',
+    version=version.__version__,
     author='Andrii Kolomoiets',
     author_email='andreyk.mad@gmail.com',
     description='Yet another Jedi Python language server',
-    long_description=long_description,
+    long_description=Path('README.md').read_text(),
     long_description_content_type='text/markdown',
     url='https://github.com/muffinmad/anakin-language-server',
     packages=['anakinls'],

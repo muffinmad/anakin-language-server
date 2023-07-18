@@ -13,10 +13,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import pkg_resources
+from pathlib import Path
 
 
-def get_version() -> str:
-    "Return the version of anakinls."
-    r = pkg_resources.require('anakin-language-server')
-    return r[0].version
+__all__ = ['__version__']
+
+
+__version__ = Path('VERSION').read_text().strip()

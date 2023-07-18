@@ -18,7 +18,7 @@ import inspect
 import logging
 
 from .server import server
-from .version import get_version
+from .version import __version__
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('pygls.protocol').setLevel(logging.WARN)
@@ -56,7 +56,7 @@ def main():
     args = parser.parse_args()
 
     if args.version:
-        print(inspect.cleandoc(f'''anakinls v{get_version()}
+        print(inspect.cleandoc(f'''anakinls v{__version__}
           Copyright (C) 2020 Andrii Kolomoiets
           This is free software; see the source for copying conditions.
           There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A
