@@ -14,8 +14,8 @@ install: clean
 
 
 .PHONY: flake8
-flake:
-	pycodestyle .
+flake8:
+	pycodestyle --config .pycodestylerc .
 	pyflakes .
 
 .PHONY: test
