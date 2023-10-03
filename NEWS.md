@@ -2,7 +2,7 @@
 
 ## 1.17
 
-- Migrating to pygls v1.0
+- Migrating to pygls v1.1
 
 ## 1.16
 

@@ -17,7 +17,7 @@ from unittest.mock import Mock
 
 from anakinls import server as aserver
 
-from pygls.lsp import types
+from lsprotocol import types
 from pygls.workspace import Document, Workspace
 
 
@@ -41,7 +41,7 @@ def foo(a, *, b, c=None):
 
 foo'''
     doc = Document(uri, content)
-    server.workspace.get_document = Mock(return_value=doc)
+    server.workspace.get_text_document = Mock(return_value=doc)
     aserver.completionFunction = aserver._completions_snippets
     completion = aserver.completions(
         server,
@@ -73,7 +73,7 @@ def foo(a, *, b, c=None):
 
 foo'''
     doc = Document(uri, content)
-    server.workspace.get_document = Mock(return_value=doc)
+    server.workspace.get_text_document = Mock(return_value=doc)
     aserver.hoverFunction = aserver._docstring
     h = aserver.hover(server, types.TextDocumentPositionParams(
         text_document=types.TextDocumentIdentifier(uri=uri),
@@ -123,9 +123,9 @@ def test_diff_to_edits():
 '''
     edits = aserver._get_text_edits(diff)
     assert len(edits) == 4
-    assert str(edits[0].range) == 'start=0:0 end=0:0'
-    assert str(edits[1].range) == 'start=10:0 end=15:0'
+    assert str(edits[0].range) == '0:0-0:0'
+    assert str(edits[1].range) == '10:0-15:0'
     assert edits[1].new_text == ''
-    assert str(edits[2].range) == 'start=16:0 end=17:0'
+    assert str(edits[2].range) == '16:0-17:0'
     assert edits[2].new_text == 'check this document. On\n'
-    assert str(edits[3].range) == 'start=24:0 end=24:0'
+    assert str(edits[3].range) == '24:0-24:0'
