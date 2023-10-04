@@ -19,4 +19,4 @@ from pathlib import Path
 __all__ = ['__version__']
 
 
-__version__ = Path('VERSION').read_text().strip()
+__version__ = (Path(__file__).parents[1] / 'VERSION').read_text().strip()
