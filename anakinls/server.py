@@ -362,9 +362,6 @@ def _validate(ls: LanguageServer, uri: str, script: Script = None):
         )
         for x in script.get_syntax_errors()
     ]
-    if result:
-        ls.publish_diagnostics(uri, result)
-        return
 
     # pyflakes
     pyflakes_check(script._code, script.path,
