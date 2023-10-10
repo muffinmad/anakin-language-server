@@ -35,19 +35,12 @@ from pyflakes.api import check as pyflakes_check  # type: ignore
 
 from yapf.yapflib.yapf_api import FormatCode  # type: ignore
 
-from pygls.lsp.methods import (COMPLETION, TEXT_DOCUMENT_DID_CHANGE,
-                               TEXT_DOCUMENT_DID_CLOSE, TEXT_DOCUMENT_DID_OPEN,
-                               HOVER, SIGNATURE_HELP, DEFINITION,
-                               REFERENCES, WORKSPACE_DID_CHANGE_CONFIGURATION,
-                               TEXT_DOCUMENT_WILL_SAVE, TEXT_DOCUMENT_DID_SAVE,
-                               DOCUMENT_SYMBOL, CODE_ACTION, FORMATTING,
-                               RANGE_FORMATTING, RENAME, DOCUMENT_HIGHLIGHT)
-from pygls.lsp import types
+from lsprotocol import types
 from pygls.server import LanguageServer
-from pygls.protocol import LanguageServerProtocol
+from pygls.protocol import LanguageServerProtocol, lsp_method
 from pygls.uris import to_fs_path
 
-from .version import get_version  # type: ignore
+from .version import __version__  # type: ignore
 
 RE_WORD = re.compile(r'\w*')
 
@@ -76,9 +69,10 @@ hoverFunction: Callable[[Name], str]
 
 class AnakinLanguageServerProtocol(LanguageServerProtocol):
 
-    def bf_initialize(
+    @lsp_method(types.INITIALIZE)
+    def lsp_initialize(
             self, params: types.InitializeParams) -> types.InitializeResult:
-        result = super().bf_initialize(params)
+        result = super().lsp_initialize(params)
         global jediEnvironment
         global jediProject
         global completionFunction
@@ -129,15 +123,14 @@ class AnakinLanguageServerProtocol(LanguageServerProtocol):
         else:
             hoverFunction = _docstring
 
-        # pygls does not currently support serverInfo of LSP v3.15
-        result.server_info = types.ServerInfo(
-            name='anakinls',
-            version=get_version(),
-        )
         return result
 
 
-server = LanguageServer(protocol_cls=AnakinLanguageServerProtocol)
+server = LanguageServer(
+    name='anakinls',
+    version=__version__,
+    protocol_cls=AnakinLanguageServerProtocol
+)
 
 scripts: Dict[str, Script] = {}
 pycodestyleOptions: Dict[str, Any] = {}
@@ -172,7 +165,7 @@ differ = Differ()
 def get_script(ls: LanguageServer, uri: str, update: bool = False) -> Script:
     result = None if update else scripts.get(uri)
     if not result:
-        document = ls.workspace.get_document(uri)
+        document = ls.workspace.get_text_document(uri)
         result = Script(
             code=document.source,
             path=document.path,
@@ -395,13 +388,13 @@ def _validate(ls: LanguageServer, uri: str, script: Script = None):
     ls.publish_diagnostics(uri, result)
 
 
-@server.feature(TEXT_DOCUMENT_DID_OPEN)
+@server.feature(types.TEXT_DOCUMENT_DID_OPEN)
 def did_open(ls: LanguageServer, params: types.DidOpenTextDocumentParams):
     if config['diagnostic_on_open']:
         _validate(ls, params.text_document.uri)
 
 
-@server.feature(TEXT_DOCUMENT_DID_CLOSE)
+@server.feature(types.TEXT_DOCUMENT_DID_CLOSE)
 def did_close(ls: LanguageServer, params: types.DidCloseTextDocumentParams):
     try:
         del scripts[params.text_document.uri]
@@ -409,7 +402,7 @@ def did_close(ls: LanguageServer, params: types.DidCloseTextDocumentParams):
         pass
 
 
-@server.feature(TEXT_DOCUMENT_DID_CHANGE)
+@server.feature(types.TEXT_DOCUMENT_DID_CHANGE)
 def did_change(ls: LanguageServer, params: types.DidChangeTextDocumentParams):
     script = get_script(ls, params.text_document.uri, True)
     if config['diagnostic_on_change']:
@@ -497,7 +490,10 @@ def _completions_snippets(completions: List[Completion],
             ))
 
 
-@server.feature(COMPLETION, types.CompletionOptions(trigger_characters=['.']))
+@server.feature(
+    types.TEXT_DOCUMENT_COMPLETION,
+    types.CompletionOptions(trigger_characters=['.']),
+)
 def completions(ls: LanguageServer, params: types.CompletionParams):
     global completionFunction
     script = get_script(ls, params.text_document.uri)
@@ -543,7 +539,7 @@ def _docstring_markdown(name: Name) -> str:
     return f'```\n{doc}\n```'
 
 
-@server.feature(HOVER)
+@server.feature(types.TEXT_DOCUMENT_HOVER)
 def hover(ls: LanguageServer,
           params: types.TextDocumentPositionParams) -> Optional[types.Hover]:
     global hoverFunction
@@ -560,8 +556,10 @@ def hover(ls: LanguageServer,
     return None
 
 
-@server.feature(SIGNATURE_HELP,
-                types.SignatureHelpOptions(trigger_characters=['(', ',']))
+@server.feature(
+    types.TEXT_DOCUMENT_SIGNATURE_HELP,
+    types.SignatureHelpOptions(trigger_characters=['(', ','])
+)
 def signature_help(
         ls: LanguageServer,
         params: types.TextDocumentPositionParams
@@ -614,7 +612,7 @@ def _get_locations(defs: List[Name]) -> List[types.Location]:
     ]
 
 
-@server.feature(DEFINITION)
+@server.feature(types.TEXT_DOCUMENT_DEFINITION)
 def definition(
         ls: LanguageServer,
         params: types.TextDocumentPositionParams) -> List[types.Location]:
@@ -623,7 +621,7 @@ def definition(
     return _get_locations(defs)
 
 
-@server.feature(REFERENCES)
+@server.feature(types.TEXT_DOCUMENT_REFERENCES)
 def references(ls: LanguageServer,
                params: types.ReferenceParams) -> List[types.Location]:
     script = get_script(ls, params.text_document.uri)
@@ -632,7 +630,7 @@ def references(ls: LanguageServer,
     return _get_locations(refs)
 
 
-@server.feature(WORKSPACE_DID_CHANGE_CONFIGURATION)
+@server.feature(types.WORKSPACE_DID_CHANGE_CONFIGURATION)
 def did_change_configuration(ls: LanguageServer,
                              settings: types.DidChangeConfigurationParams):
     if not settings.settings or 'anakinls' not in settings.settings:
@@ -673,13 +671,14 @@ def did_change_configuration(ls: LanguageServer,
             _validate(ls, uri)
 
 
-@server.feature(TEXT_DOCUMENT_WILL_SAVE)
+@server.feature(types.TEXT_DOCUMENT_WILL_SAVE)
 def will_save(ls: LanguageServer, params: types.WillSaveTextDocumentParams):
     pass
 
 
-@server.feature(TEXT_DOCUMENT_DID_SAVE,
-                types.TextDocumentSaveRegistrationOptions(include_text=False))
+@server.feature(
+    types.TEXT_DOCUMENT_DID_SAVE, types.SaveOptions(include_text=False)
+)
 def did_save(ls: LanguageServer, params: types.DidSaveTextDocumentParams):
     if config['diagnostic_on_save']:
         _validate(ls, params.text_document.uri)
@@ -765,7 +764,7 @@ def _document_symbol_plain(
     return list(_symbols())
 
 
-@server.feature(DOCUMENT_SYMBOL)
+@server.feature(types.TEXT_DOCUMENT_DOCUMENT_SYMBOL)
 def document_symbol(
         ls: LanguageServer, params: types.DocumentSymbolParams
 ) -> Union[List[types.DocumentSymbol], List[types.SymbolInformation], None]:
@@ -837,14 +836,14 @@ def _get_document_changes(
             result.append(types.TextDocumentEdit(
                 text_document=types.VersionedTextDocumentIdentifier(
                     uri=uri,
-                    version=ls.workspace.get_document(uri).version or 0
+                    version=ls.workspace.get_text_document(uri).version or 0
                 ),
                 edits=text_edits
             ))
     return result
 
 
-@server.feature(CODE_ACTION, types.CodeActionOptions(
+@server.feature(types.TEXT_DOCUMENT_CODE_ACTION, types.CodeActionOptions(
     code_action_kinds=[
         types.CodeActionKind.RefactorInline,
         types.CodeActionKind.RefactorExtract]))
@@ -881,21 +880,21 @@ def _formatting(
     return _get_text_edits(diff)
 
 
-@server.feature(FORMATTING)
+@server.feature(types.TEXT_DOCUMENT_FORMATTING)
 def formatting(
         ls: LanguageServer, params: types.DocumentFormattingParams
 ) -> Optional[List[types.TextEdit]]:
     return _formatting(ls, params.text_document.uri)
 
 
-@server.feature(RANGE_FORMATTING)
+@server.feature(types.TEXT_DOCUMENT_RANGE_FORMATTING)
 def range_formatting(
         ls: LanguageServer, params: types.DocumentRangeFormattingParams
 ) -> Optional[List[types.TextEdit]]:
     return _formatting(ls, params.text_document.uri, params.range)
 
 
-@server.feature(RENAME)
+@server.feature(types.TEXT_DOCUMENT_RENAME)
 def rename(ls: LanguageServer,
            params: types.RenameParams) -> Optional[types.WorkspaceEdit]:
     script = get_script(ls, params.text_document.uri)
@@ -911,7 +910,7 @@ def rename(ls: LanguageServer,
     return None
 
 
-@server.feature(DOCUMENT_HIGHLIGHT)
+@server.feature(types.TEXT_DOCUMENT_DOCUMENT_HIGHLIGHT)
 def highlight(
         ls: LanguageServer, params: types.TextDocumentPositionParams
 ) -> Optional[List[types.DocumentHighlight]]:
