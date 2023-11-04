@@ -40,7 +40,7 @@ from pygls.server import LanguageServer
 from pygls.protocol import LanguageServerProtocol, lsp_method
 from pygls.uris import to_fs_path
 
-from .version import __version__  # type: ignore
+from ._version import version
 
 RE_WORD = re.compile(r'\w*')
 
@@ -128,7 +128,7 @@ class AnakinLanguageServerProtocol(LanguageServerProtocol):
 
 server = LanguageServer(
     name='anakinls',
-    version=__version__,
+    version=version,
     protocol_cls=AnakinLanguageServerProtocol
 )
 
