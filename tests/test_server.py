@@ -12,6 +12,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+import pytest
 
 from unittest.mock import Mock
 
@@ -30,10 +31,12 @@ class Server():
         self.workspace = Workspace('', None)
 
 
-server = Server()
+@pytest.fixture()
+def server():
+    return Server()
 
 
-def test_completion():
+def test_completion(server):
     uri = 'file://test_completion.py'
     content = '''
 def foo(a, *, b, c=None):
@@ -64,7 +67,7 @@ foo'''
     assert item.insert_text == 'foo(${1:a}, b=${2:b})$0'
 
 
-def test_hover():
+def test_hover(server):
     uri = 'file://test_hover.py'
     content = '''
 def foo(a, *, b, c=None):
@@ -129,3 +132,16 @@ def test_diff_to_edits():
     assert str(edits[2].range) == '16:0-17:0'
     assert edits[2].new_text == 'check this document. On\n'
     assert str(edits[3].range) == '24:0-24:0'
+
+
+def test_no_pyflakes_syntax_error_diagnostic(server):
+    uri = 'file://test_diagnostic.py'
+    content = 'pass\n\nif\n'
+    doc = Document(uri, content)
+    server.workspace.get_text_document = Mock(return_value=doc)
+    server.publish_diagnostics = Mock()
+    aserver._validate(server, uri)
+    assert server.publish_diagnostics.called
+    diagnostics = server.publish_diagnostics.call_args[0][1]
+    assert len(diagnostics) == 1
+    assert diagnostics[0].source == 'jedi'
