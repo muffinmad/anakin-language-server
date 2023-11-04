@@ -32,6 +32,8 @@ anakinls = "anakinls.__main__:main"
 
 [tool.setuptools_scm]
 version_file = "anakinls/_version.py"
+version_scheme = "post-release"
+local_scheme = "no-local-version"
 
 [build-system]
 requires = ["setuptools>=64", "setuptools_scm>=8"]
