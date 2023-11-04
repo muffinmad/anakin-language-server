@@ -195,19 +195,9 @@ class PyflakesReporter:
     def _get_codeline(self, line):
         return self.script._code_lines[line].rstrip('\n\r')
 
-    def syntaxError(self, _filename, msg, lineno, offset, _text):
-        line = lineno - 1
-        col = offset or 0
-        self.result.append(types.Diagnostic(
-            range=types.Range(
-                start=types.Position(line=line, character=col),
-                end=types.Position(
-                    line=line,
-                    character=len(self._get_codeline(line)) - col)),
-            message=msg,
-            severity=types.DiagnosticSeverity.Error,
-            source='pyflakes'
-        ))
+    def syntaxError(self, *args, **kwargs):
+        # Syntax errors are provided by Jedi. Just ignore pyflakes.
+        pass
 
     def flake(self, message):
         line = message.lineno - 1
