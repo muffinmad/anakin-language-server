@@ -1,4 +1,4 @@
-__version__ = '1.19'
+__version__ = '1.20'
 
 __copyright__ = """
 Copyright (C) 2020 Andrii Kolomoiets
