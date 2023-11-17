@@ -12,17 +12,16 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-import pytest
-
 from unittest.mock import Mock
 
-from anakinls import server as aserver
-
+import pytest
 from lsprotocol import types
 from pygls.workspace import Document, Workspace
 
+from anakinls import server as aserver
 
-class Server():
+
+class Server:
     jediEnvironment = None
     jediProject = None
 
@@ -38,11 +37,11 @@ def server():
 
 def test_completion(server):
     uri = 'file://test_completion.py'
-    content = '''
+    content = """
 def foo(a, *, b, c=None):
     pass
 
-foo'''
+foo"""
     doc = Document(uri, content)
     server.workspace.get_text_document = Mock(return_value=doc)
     aserver.completionFunction = aserver._completions_snippets
@@ -52,8 +51,10 @@ foo'''
             text_document=types.TextDocumentIdentifier(uri=uri),
             position=types.Position(line=4, character=3),
             context=types.CompletionContext(
-                trigger_kind=types.CompletionTriggerKind.Invoked)
-        ))
+                trigger_kind=types.CompletionTriggerKind.Invoked
+            ),
+        ),
+    )
     assert len(completion.items) == 2
     item = completion.items[0]
     assert item.insert_text is None
@@ -78,9 +79,13 @@ foo'''
     doc = Document(uri, content)
     server.workspace.get_text_document = Mock(return_value=doc)
     aserver.hoverFunction = aserver._docstring
-    h = aserver.hover(server, types.TextDocumentPositionParams(
-        text_document=types.TextDocumentIdentifier(uri=uri),
-        position=types.Position(line=5, character=0)))
+    h = aserver.hover(
+        server,
+        types.TextDocumentPositionParams(
+            text_document=types.TextDocumentIdentifier(uri=uri),
+            position=types.Position(line=5, character=0),
+        ),
+    )
     assert h is not None
     assert isinstance(h.contents, types.MarkupContent)
     assert h.contents.kind == types.MarkupKind.PlainText
@@ -88,7 +93,7 @@ foo'''
 
 
 def test_diff_to_edits():
-    diff = '''--- /path/to/original	timestamp
+    diff = """--- /path/to/original	timestamp
 +++ /path/to/new	timestamp
 @@ -1,3 +1,9 @@
 +This is an important
@@ -123,7 +128,7 @@ def test_diff_to_edits():
 +This paragraph contains
 +important new additions
 +to this document.
-'''
+"""
     edits = aserver._get_text_edits(diff)
     assert len(edits) == 4
     assert str(edits[0].range) == '0:0-0:0'

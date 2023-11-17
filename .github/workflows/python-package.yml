@@ -27,9 +27,9 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         make install
-    - name: Lint with pycodestyle and pyflakes
+    - name: Check code with linter and formatter
       run: |
-        make flake
-    - name: Test with pytest
+        make check
+    - name: Run tests
       run: |
         make test

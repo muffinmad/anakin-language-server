@@ -13,10 +13,10 @@ install: clean
 	$(PYTHON) -m pip install -r requirements.txt
 
 
-.PHONY: flake flake8
-flake flake8:
-	pycodestyle --config .pycodestylerc .
-	pyflakes .
+.PHONY: check
+check:
+	ruff format --check .
+	ruff check .
 
 .PHONY: test
 test:

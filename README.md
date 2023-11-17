@@ -110,3 +110,10 @@ Set it in project's dir-locals file.")
 ```
 pip install anakin-language-server
 ```
+
+## Development
+
+```
+pip install pre-commit
+pre-commit install
+```

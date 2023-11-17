@@ -4,4 +4,5 @@ pyflakes~=2.2
 pycodestyle~=2.5
 yapf~=0.30
 
-pytest
+pytest==7.4.3
+ruff==0.1.5
