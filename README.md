@@ -114,6 +114,6 @@ pip install anakin-language-server
 ## Development
 
 ```
-pip install -r requirements.txt
+pip install pre-commit
 pre-commit install
 ```
