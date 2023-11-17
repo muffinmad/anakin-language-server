@@ -32,6 +32,7 @@ class Server:
 
 @pytest.fixture()
 def server():
+    aserver.scripts.clear()
     return Server()
 
 
@@ -139,9 +140,9 @@ def test_diff_to_edits():
     assert str(edits[3].range) == '24:0-24:0'
 
 
-def test_no_pyflakes_syntax_error_diagnostic(server):
+@pytest.mark.parametrize('content', ('pass\n\nif\n', 'def foo(def\n'))
+def test_only_jedi_syntax_error_diagnostic(server, content):
     uri = 'file://test_diagnostic.py'
-    content = 'pass\n\nif\n'
     doc = Document(uri, content)
     server.workspace.get_text_document = Mock(return_value=doc)
     server.publish_diagnostics = Mock()
