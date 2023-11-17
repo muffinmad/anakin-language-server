@@ -31,7 +31,7 @@ from jedi.api.classes import Completion, Name  # type: ignore
 from jedi.api.refactoring import Refactoring  # type: ignore
 from lsprotocol import types
 from pycodestyle import BaseReport as CodestyleBaseReport  # type: ignore
-from pycodestyle import Checker as CodestyleChecker
+from pycodestyle import Checker as CodestyleBaseChecker
 from pycodestyle import StyleGuide as CodestyleStyleGuide
 from pyflakes.api import check as pyflakes_check  # type: ignore
 from pygls.protocol import LanguageServerProtocol, lsp_method
@@ -221,6 +221,12 @@ class PyflakesReporter:
                 source='pyflakes',
             )
         )
+
+
+class CodestyleChecker(CodestyleBaseChecker):
+    def report_invalid_syntax(self):
+        # Syntax errors are provided by Jedi. Just ignore pycodestyle.
+        pass
 
 
 class CodestyleReport(CodestyleBaseReport):
