@@ -151,3 +151,14 @@ def test_only_jedi_syntax_error_diagnostic(server, content):
     diagnostics = server.publish_diagnostics.call_args[0][1]
     assert len(diagnostics) == 1
     assert diagnostics[0].source == 'jedi'
+
+
+def test_pycodestyle_lineending(server):
+    uri = 'file://test_pycodestyle.py'
+    doc = Document(uri, 'while True:\r\n    break\r\n')
+    server.workspace.get_text_document = Mock(return_value=doc)
+    server.publish_diagnostics = Mock()
+    aserver._validate(server, uri)
+    assert server.publish_diagnostics.called
+    diagnostics = server.publish_diagnostics.call_args[0][1]
+    assert len(diagnostics) == 0

@@ -396,7 +396,9 @@ def _validate(ls: LanguageServer, uri: str, script: Script = None):
     codestyleopts = get_pycodestyle_options(ls, uri)
     CodestyleChecker(
         script.path,
-        script._code.splitlines(True),
+        script._code.replace('\r\n', '\n')
+        .replace('\r', '\n')
+        .splitlines(True),
         codestyleopts,
         CodestyleReport(codestyleopts, result),
     ).check_all()
