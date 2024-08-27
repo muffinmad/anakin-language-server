@@ -1,5 +1,10 @@
 # NEWS
 
+## 1.22
+
+- Use pygls v1.3
+
+
 ## 1.17
 
 - Migrating to pygls v1.1
