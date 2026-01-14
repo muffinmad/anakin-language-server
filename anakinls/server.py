@@ -912,9 +912,6 @@ def _get_document_changes(
 def code_action(
     ls: LanguageServer, params: types.CodeActionParams
 ) -> Optional[List[types.CodeAction]]:
-    if params.range.start != params.range.end:
-        # No selection actions
-        return None
     script = get_script(ls, params.text_document.uri)
     try:
         refactoring = script.inline(
