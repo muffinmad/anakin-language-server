@@ -162,3 +162,34 @@ def test_pycodestyle_lineending(server):
     assert server.publish_diagnostics.called
     diagnostics = server.publish_diagnostics.call_args[0][1]
     assert len(diagnostics) == 0
+
+
+def test_inline_range(server):
+    uri = 'file://test_inline.py'
+    content = """
+foo = 3.1
+bar = foo + 1
+x = int(bar)
+    """
+    doc = Document(uri, content)
+    server.workspace.get_text_document = Mock(return_value=doc)
+    result = aserver.code_action(
+        server,
+        types.CodeActionParams(
+            text_document=types.TextDocumentIdentifier(uri=uri),
+            range=types.Range(
+                start=types.Position(line=3, character=8),
+                end=types.Position(line=3, character=10),
+            ),
+            context=types.CodeActionContext(diagnostics=[]),
+        ),
+    )
+    assert result
+    assert len(result) == 1
+    changes = result[0].edit.document_changes
+    edit = changes[0].edits[0]
+    assert edit.range.start.line == 2
+    assert edit.range.start.character == 0
+    assert edit.range.end.line == 4
+    assert edit.range.end.character == 0
+    assert edit.new_text == 'x = int(foo + 1)\n'
